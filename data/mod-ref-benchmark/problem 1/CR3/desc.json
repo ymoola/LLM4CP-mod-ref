@@ -1,0 +1,7 @@
+{
+  "cr_id": "CR3",
+  "title": "Minimize Consecutive Identical Car Types",
+  "natural_language": "Modify the model to add an optimization objective: among feasible sequences, minimize the total number of consecutive cars of the same type.",
+  "expected_change": "Introduce an objective function that counts consecutive identical car types and minimizes this total. Keep all original constraints unchanged.",
+  "evaluation_goal": "Ensure the solution satisfies all option and demand constraints while minimizing adjacent identical car types."
+}

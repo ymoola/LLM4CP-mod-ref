@@ -1,0 +1,7 @@
+{
+  "cr_id": "CR2",
+  "title": "Add New Car Type (Type 5) Requiring Options 0 and 1",
+  "natural_language": "Add a new car type (Type 5) that requires both Option 0 (air-conditioning) and Option 1 (sunroof). Ensure all sequence and capacity constraints remain satisfied.",
+  "expected_change": "Extend the model by adding one additional car type requiring Options 0 and 1. Update demand and requires matrices accordingly.",
+  "evaluation_goal": "Verify that the new car type appears in the sequence the correct number of times and that all option window constraints remain satisfied."
+}

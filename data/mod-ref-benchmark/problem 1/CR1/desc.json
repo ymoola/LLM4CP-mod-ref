@@ -1,0 +1,7 @@
+{
+  "cr_id": "CR1",
+  "title": "Tighten Option 0 (Air-Conditioning) Constraint",
+  "natural_language": "Tighten the constraint on option 0 (representing air-conditioning) installation: at most one car requiring this option may appear within any sequence of four consecutive cars.",
+  "expected_change": "Update constraint for Option 0 to have a window size of 4 and a maximum of 1 occurrence within that window.",
+  "evaluation_goal": "Ensure that for Option 0 (air-conditioning), no 4-car window in the sequence contains more than one car requiring this option."
+}
