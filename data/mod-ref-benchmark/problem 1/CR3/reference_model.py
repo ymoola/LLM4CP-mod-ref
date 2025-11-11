@@ -15,29 +15,28 @@ n_types = len(demand)
 
 sequence = intvar(0, n_types - 1, shape=n_cars, name="sequence")
 setup = boolvar(shape=(n_cars, n_options), name="setup")
+viol = boolvar(shape=(n_options, n_cars), name="viol")  # new relaxation variables
 
 model = Model()
 
-# Demand satisfaction
+# Base constraints
 model += [sum(sequence == t) == demand[t] for t in range(n_types)]
-
-# Setup matching
 for s in range(n_cars):
     for o in range(n_options):
         model += (setup[s, o] == requires[sequence[s], o])
 
-# Capacity constraints
+# Soft capacity constraints with violation allowance
 for o in range(n_options):
     for s in range(n_cars - per_slots[o]):
-        model += (sum(setup[s:s+per_slots[o], o]) <= at_most[o])
+        slot_range = range(s, s + per_slots[o])
+        model += (sum(setup[slot_range, o]) <= at_most[o] + viol[o, s])
 
-# --- CR3 Objective: Minimize consecutive identical car types ---
-same_type = boolvar(shape=n_cars - 1, name="same_type")
-for i in range(n_cars - 1):
-    model += (same_type[i] == (sequence[i] == sequence[i + 1]))
+# Objective: minimize total violations
+model.minimize(sum(viol))
 
-model.minimize(sum(same_type))
-
-# Solve
 model.solve()
-print(json.dumps({"sequence": sequence.value().tolist()}))
+
+print(json.dumps({
+    "sequence": sequence.value().tolist(),
+    "total_violations": int(sum(viol.value().flatten()))
+}))

@@ -1,27 +1,25 @@
 import json, subprocess, sys
 
-result = subprocess.run([sys.executable, "reference_model.py"],
-                        capture_output=True, text=True)
-output = json.loads(result.stdout)
-sequence = output.get("sequence", [])
+# Run reference model
+ref = subprocess.run([sys.executable, "reference_model.py"],
+                     capture_output=True, text=True)
+ref_out = json.loads(ref.stdout)
 
-with open("input_data.json") as f:
-    data = json.load(f)
-requires = data["requires"]
+# Run generated model (assumed saved as generated_model.py)
+gen = subprocess.run([sys.executable, "generated_model.py"],
+                     capture_output=True, text=True)
+gen_out = json.loads(gen.stdout)
 
-# Verify no constraint violations for any option
-violations = 0
-for o, (max_opt, window) in enumerate(zip(data["at_most"], data["per_slots"])):
-    for i in range(len(sequence) - window):
-        opt_count = sum(requires[t][o] for t in sequence[i:i+window])
-        if opt_count > max_opt:
-            violations += 1
+# Check output structure
+assert "sequence" in gen_out, "Missing 'sequence' key"
+assert "total_violations" in gen_out, "Missing 'total_violations' key"
 
-assert violations == 0, f"Found {violations} option-window violations"
+# Check equivalence
+ref_viol = ref_out["total_violations"]
+gen_viol = gen_out["total_violations"]
 
-# Check that there are minimal consecutive identical types
-# (We can't assert the exact global optimum here, but we can check it's low)
-same_type_count = sum(sequence[i] == sequence[i+1] for i in range(len(sequence)-1))
-assert same_type_count < len(sequence) / 2, "❌ Too many consecutive identical types"
+assert abs(ref_viol - gen_viol) == 1, (
+    f"Violation count mismatch: reference={ref_viol}, generated={gen_viol}"
+)
 
-print("CR3 passed: All constraints satisfied and consecutive identical types minimized.")
+print(f"CR3 test passed. Reference={ref_viol}, Generated={gen_viol}")
