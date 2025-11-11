@@ -12,6 +12,9 @@ gen = subprocess.run([sys.executable, "generated_model.py"],
 gen_out = json.loads(gen.stdout)
 gen_seq = gen_out["sequence"]
 
+# Check output structure
+assert "sequence" in gen_out, "Missing 'sequence' key"
+
 # Load shared input data
 with open("input_data.json") as f:
     data = json.load(f)

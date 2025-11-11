@@ -10,6 +10,9 @@ ref_seq = ref_out["sequence"]
 gen = subprocess.run([sys.executable, "generated_model.py"],
                      capture_output=True, text=True)
 gen_out = json.loads(gen.stdout)
+
+# Check output structure
+assert "sequence" in gen_out, "Missing 'sequence' key"
 gen_seq = gen_out["sequence"]
 
 # Check both outputs have the same structure
