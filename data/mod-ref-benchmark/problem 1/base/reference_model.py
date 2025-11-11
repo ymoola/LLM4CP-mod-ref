@@ -1,5 +1,5 @@
 """
-Car Sequencing baseline model (prompt-safe version for LLM input)
+Car Sequencing baseline model
 ---------------------------------------------------------------
 """
 
