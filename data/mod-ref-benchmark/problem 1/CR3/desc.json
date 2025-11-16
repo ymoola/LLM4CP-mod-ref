@@ -1,7 +1,0 @@
-{
-  "cr_id": "CR3",
-  "title": "Minimize Option Capacity Violations",
-  "natural_language": "Transform the strict option capacity constraint into a soft constraint and minimize the total number of capacity violations across all options and positions.",
-  "expected_change": "Introduce binary violation variables viol[o,s] that relax the capacity constraint and add a new objective minimizing the sum of all viol[o,s].",
-  "evaluation_goal": "Verify that violation variables exist and the solver objective minimizes total violations while keeping other constraints unchanged."
-}

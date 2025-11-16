@@ -1,0 +1,19 @@
+
+{
+    "source": "modref",
+    "name": "Car Sequencing – CR2",
+    "content": "Introduce a spacing constraint to balance distribution: each car type must appear at least once in every window of `gap_limit` consecutive cars. The model must still satisfy the base sequencing constraints for demand and option capacities.",
+    "value_info": [
+      "`at_most`: A list of integers defining, for each option, the maximum number of cars that can require that option in a consecutive window.\n`per_slots`: A list of integers representing the window size for each option's capacity check.\n`demand`: A list of integers for the required number of cars per type.\n`requires`: A 2D binary array `[n_types × n_options]` defining option requirements for each car type.\n`gap_limit`: An integer specifying the maximum gap (window size) allowed between appearances of any car type in the final sequence."
+    ],
+    "ref_sol_format": {
+      "var1": {
+        "descr": "`sequence`: A list of integers representing the production order of car types, where each integer denotes the car type index at that position.",
+        "example": "[0, 2, 1, 0, 2, 1]",
+        "type": "List[int]",
+        "size": "[sum(demand)]",
+        "index": "0-based"
+      }
+    },
+    "prob_type": "csp"
+  }

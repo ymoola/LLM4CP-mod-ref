@@ -1,7 +1,0 @@
-{
-  "cr_id": "CR1",
-  "title": "Prevent Consecutive Identical Car Types",
-  "natural_language": "Add a constraint that no two consecutive cars in the production sequence are of the same type.",
-  "expected_change": "Introduce a new constraint enforcing sequence[s] != sequence[s+1] for all positions s.",
-  "evaluation_goal": "Ensure that consecutive car positions never contain the same car type."
-}

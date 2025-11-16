@@ -1,8 +1,0 @@
-Parameters:
-- at_most: list[int] (length = number of options)
-- per_slots: list[int] (same length as at_most)
-- demand: list[int] (cars per type)
-- requires: 2D list[int] of shape [n_types x n_options]
-
-Description:
-Defines window and demand constraints for sequencing cars with options.

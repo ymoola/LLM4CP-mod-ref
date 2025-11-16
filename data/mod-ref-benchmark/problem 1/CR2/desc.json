@@ -1,7 +1,0 @@
-{
-  "cr_id": "CR2",
-  "title": "Even Distribution of Car Types",
-  "natural_language": "Add a constraint ensuring that each car type is evenly distributed across the production sequence so that no long gaps occur between identical types.",
-  "expected_change": "Introduce a new parameter 'gap_limit' and constraint requiring that for each car type t, every sliding window of length gap_limit contains at least one occurrence of t.",
-  "evaluation_goal": "Verify that no window of size gap_limit in the sequence is entirely missing a car type."
-}

@@ -1,0 +1,24 @@
+{
+    "source": "modref",
+    "name": "Car Sequencing – CR3",
+    "content": "Relax the per-option capacity constraints to allow limited violations and introduce an optimization objective to minimize the total number of violations across all options. The model must still satisfy demand and option-requirement consistency constraints.",
+    "value_info": [
+      "`at_most`: A list of integers representing, for each option, the original maximum number of cars permitted per window.\n`per_slots`: A list of integers defining the sliding window size for each option's constraint.\n`demand`: A list of integers for the number of cars per type.\n`requires`: A binary 2D array `[n_types × n_options]` specifying which options each car type requires."
+    ],
+    "ref_sol_format": {
+      "var1": {
+        "descr": "`sequence`: A list of integers representing the order of car types in the final schedule.",
+        "example": "[0, 1, 2, 1, 0, 2]",
+        "type": "List[int]",
+        "size": "[sum(demand)]",
+        "index": "0-based"
+      },
+      "var2": {
+        "descr": "`total_violations`: An integer representing the total number of per-option capacity violations observed in the produced sequence, which the model minimizes.",
+        "example": "3",
+        "type": "int",
+        "size": "scalar"
+      }
+    },
+    "prob_type": "cop"
+}
