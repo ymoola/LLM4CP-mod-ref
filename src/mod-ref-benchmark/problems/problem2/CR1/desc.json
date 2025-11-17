@@ -1,0 +1,23 @@
+{
+  "source": "modref",
+  "name": "Template Design – CR1",
+  "content": "Introduce a load-balancing constraint requiring that no template may be used disproportionately more than others. Specifically, for an integer ratio (alpha_num / alpha_den) >= 1, the production of any template must not exceed (alpha_num / alpha_den) times the production of any other template.",
+  "value_info": [
+    "`n_slots`: Number of slots available on each template.\n`n_templates`: Number of templates.\n`n_var`: Number of product variations.\n`demand`: List of integers of size n_var representing required demand for each variation.\n`alpha_num`: An integer numerator of the load-balance ratio.\n`alpha_den`: An integer denominator (must be > 0). The ratio alpha_num/alpha_den must be >= 1."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`production`: A list of integers of length n_templates giving the number of times each template is used.",
+      "example": "[10, 12]",
+      "type": "List[int]",
+      "size": "[n_templates]"
+    },
+    "var2": {
+      "descr": "`layout`: A 2D list of shape [n_templates × n_var] showing slot allocations.",
+      "example": "[[1,1,2,...],[0,2,1,...]]",
+      "type": "List[List[int]]",
+      "size": "[n_templates, n_var]"
+    }
+  },
+  "prob_type": "cop"
+}

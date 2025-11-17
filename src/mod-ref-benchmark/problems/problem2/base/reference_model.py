@@ -1,55 +1,54 @@
-# Data
-n_slots = 9  # The amount of slots on a template
-n_templates = 2  # The amount of templates
-n_var = 7  # The amount of different variations
-demand = [250, 255, 260, 500, 500, 800, 1100]  # The demand per variation
-# End of data
-
-# Import libraries
 from cpmpy import *
 import json
 
-# Parameters
-ub = max(demand)  # The upper bound for the production
+def build_model(n_slots, n_templates, n_var, demand):
+    """
+    Base CP model for the Template Design problem.
+    - n_slots: integer, slots per template
+    - n_templates: integer, number of templates
+    - n_var: integer, number of variations
+    - demand: list[int], demand per variation
+    """
 
-# create model
-model = Model()
+    ub = max(demand)  # upper bound on production counts
 
-# decision variables
-production = intvar(1, ub, shape=n_templates, name="production")
-layout = intvar(0, n_var, shape=(n_templates, n_var), name="layout")
+    # Decision variables
+    production = intvar(1, ub, shape=n_templates, name="production")
+    layout = intvar(0, n_slots, shape=(n_templates, n_var), name="layout")
 
-# all slots are populated in a template
-model += all(sum(layout[i]) == n_slots for i in range(n_templates))
+    model = Model()
 
-# meet demand
-for var in range(n_var):
-    model += sum(production * layout[:, var]) >= demand[var]
+    # 1. All slots in each template must be filled
+    for i in range(n_templates):
+        model += (sum(layout[i]) == n_slots)
 
-# break symmetry
-# equal demand
-for i in range(n_var - 1):
-    if demand[i] == demand[i + 1]:
-        model += layout[0, i] <= layout[0, i + 1]
-        for j in range(n_templates - 1):
-            model += (layout[j, i] == layout[j, i + 1]).implies(layout[j + 1, i] <= layout[j + 1, i + 1])
+    # 2. Demand satisfaction
+    for v in range(n_var):
+        model += (sum(production * layout[:, v]) >= demand[v])
 
-# distinguish templates
-for i in range(n_templates - 1):
-    model += production[i] <= production[i + 1]
+    # 3. Objective: minimize number of printed sheets
+    model.minimize(sum(production))
 
-# static symmetry
-for i in range(n_var - 1):
-    if demand[i] < demand[i + 1]:
-        model += sum(production * layout[:, i]) <= sum(production * layout[:, i + 1])
+    return model, production, layout
 
-# minimize number of printed sheets
-model.minimize(sum(production))
 
-# Solve
-model.solve()
+if __name__ == "__main__":
+    # Load input data
+    with open("input_data.json") as f:
+        data = json.load(f)
 
-# Print
-solution = {"production": production.value().tolist(), "layout": layout.value().tolist()}
-print(json.dumps(solution))
-# End of CPMPy script
+    n_slots = data["n_slots"]
+    n_templates = data["n_templates"]
+    n_var = data["n_var"]
+    demand = data["demand"]
+
+    model, production, layout = build_model(
+        n_slots, n_templates, n_var, demand
+    )
+
+    model.solve()
+
+    print(json.dumps({
+        "production": production.value().tolist(),
+        "layout": layout.value().tolist()
+    }))

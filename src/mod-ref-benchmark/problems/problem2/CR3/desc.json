@@ -1,0 +1,31 @@
+{
+  "source": "modref",
+  "name": "Template Design – CR3",
+  "content": "Modify the objective so that instead of minimizing the total number of printed sheets, the model minimizes the maximum production load across all templates. All existing constraints, including slot usage and demand satisfaction, remain unchanged.",
+  "value_info": [
+    "`n_slots`: Number of slots per template.",
+    "`n_templates`: Number of templates.",
+    "`n_var`: Number of product variations.",
+    "`demand`: List of required quantities for each variation."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`production`: List of template usages.",
+      "example": "[8, 10]",
+      "type": "List[int]",
+      "size": "[n_templates]"
+    },
+    "var2": {
+      "descr": "`layout`: Slot allocation matrix.",
+      "example": "[[1,1,2,...],[0,2,1,...]]",
+      "type": "List[List[int]]",
+      "size": "[n_templates, n_var]"
+    },
+    "var3": {
+      "descr": "`max_load`: The maximum value among all template productions.",
+      "example": "10",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}

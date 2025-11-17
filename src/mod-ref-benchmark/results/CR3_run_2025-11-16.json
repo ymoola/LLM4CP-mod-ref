@@ -1,0 +1,33 @@
+{
+  "cr": "CR3",
+  "model": "reference_model.py",
+  "timestamp": "2025-11-16 18:42:38.241486",
+  "result": "pass",
+  "output": {
+    "production": [
+      250,
+      250
+    ],
+    "layout": [
+      [
+        0,
+        0,
+        0,
+        1,
+        1,
+        2,
+        5
+      ],
+      [
+        1,
+        2,
+        2,
+        1,
+        1,
+        2,
+        0
+      ]
+    ],
+    "max_load": 250
+  }
+}

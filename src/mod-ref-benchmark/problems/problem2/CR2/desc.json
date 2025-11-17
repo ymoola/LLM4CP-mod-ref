@@ -1,0 +1,26 @@
+{
+  "source": "modref",
+  "name": "Template Design – CR2",
+  "content": "Introduce a minimum-diversity constraint on each template: every template must include at least three distinct variations. That is, it is no longer allowed for a template to contain only a single variation occupying all slots. All original template design constraints (slot fill, demand fulfillment, symmetry-breaking, and production ordering) must still be satisfied.",
+  "value_info": [
+    "`n_slots`: The number of slots per template, given as an integer.",
+    "`n_templates`: The number of templates, given as an integer.",
+    "`n_var`: The number of design variations, given as an integer.",
+    "`demand`: A list of integers of size `n_var`, giving the required number of units for each design variation."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`layout`: A 2D list of integers of size `[n_templates x n_var]`, where `layout[i][v]` is the number of slots on template `i` allocated to variation `v`.",
+      "example": "[[1,2,0,0,0,3,3], [0,1,3,2,1,1,1]]",
+      "type": "List[List[int]]",
+      "size": "[n_templates, n_var]"
+    },
+    "var2": {
+      "descr": "`production`: A list of integers of size `n_templates`, where `production[i]` is the number of times template `i` is printed.",
+      "example": "[120, 95]",
+      "type": "List[int]",
+      "size": "[n_templates]"
+    }
+  },
+  "prob_type": "cop"
+}
