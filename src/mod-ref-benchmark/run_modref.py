@@ -58,6 +58,8 @@ def run_pipeline(problem_path, cr_name, model_filename="reference_model.py"):
     cr_path = os.path.join(problem_path, cr_name)
     print(f"\n=== Running pipeline for {cr_name} ===")
 
+    problem = os.path.basename(problem_path)
+
     # Determine which model to run
     if model_filename == "reference_model.py":
         model_path = os.path.join(cr_path, "reference_model.py")
@@ -86,7 +88,7 @@ def run_pipeline(problem_path, cr_name, model_filename="reference_model.py"):
 
     # Step 4: Save and display
     os.makedirs("results", exist_ok=True)
-    out_file = f"results/{cr_name}_run_{datetime.date.today()}.json"
+    out_file = f"results/{problem}_{cr_name}_run_{datetime.date.today()}.json"
     with open(out_file, "w") as f:
         json.dump({
             "cr": cr_name,

@@ -24,9 +24,8 @@ def generate_model(
     The generated model must load input_data.json at runtime.
     """
 
-    # -------------------------------------------------------------------
+  
     # Paths
-    # -------------------------------------------------------------------
     cr_path = os.path.join(problem_path, cr_name)
     base_path = os.path.join(problem_path, "base")
 
@@ -34,27 +33,22 @@ def generate_model(
     base_desc_path = os.path.join(base_path, base_desc_filename)
     base_model_path = os.path.join(base_path, base_model_filename)
 
-    # -------------------------------------------------------------------
     # Load base natural description
-    # -------------------------------------------------------------------
     if not os.path.exists(base_desc_path):
         raise FileNotFoundError(f"Missing base problem description at: {base_desc_path}")
 
     with open(base_desc_path, "r") as f:
         base_nl_description = f.read()
 
-    # -------------------------------------------------------------------
+
     # Load base reference model
-    # -------------------------------------------------------------------
     if not os.path.exists(base_model_path):
         raise FileNotFoundError(f"Missing base reference model at: {base_model_path}")
 
     with open(base_model_path, "r") as f:
         base_model_code = f.read()
 
-    # -------------------------------------------------------------------
     # Load CR description (desc.json)
-    # -------------------------------------------------------------------
     with open(desc_path, "r") as f:
         cr_desc = json.load(f)
 
@@ -62,10 +56,7 @@ def generate_model(
     value_info = cr_desc.get("value_info", [])
     ref_sol_format = cr_desc.get("ref_sol_format", {})
 
-    # -------------------------------------------------------------------
-    # Build LLM prompt — NO INPUT DATA LEAK
-    # -------------------------------------------------------------------
-
+    # Build LLM prompt
     prompt = f"""
 You are a CPMPy modeling assistant.
 
@@ -112,9 +103,8 @@ Output ONLY the complete CPMPy code. No additional text.
 
     print(f"prompt: \n {prompt}")
 
-    # -------------------------------------------------------------------
-    # Call LLM
-    # -------------------------------------------------------------------
+
+    # Call LLM   
     print("Calling LLM to generate model...")
 
     response = ollama.generate(
@@ -126,9 +116,8 @@ Output ONLY the complete CPMPy code. No additional text.
 
     code = response["response"]
 
-    # -------------------------------------------------------------------
+
     # Save generated model
-    # -------------------------------------------------------------------
     output_path = os.path.join(cr_path, model_filename)
     with open(output_path, "w") as f:
         f.write(code)

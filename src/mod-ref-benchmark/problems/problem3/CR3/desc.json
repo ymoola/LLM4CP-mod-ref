@@ -1,0 +1,21 @@
+{
+  "source": "modref",
+  "name": "Bus Driver Scheduling – CR3",
+  "content": "Extend the scheduling model with a global constraint on total shift duration. Each shift has a specified duration, and the sum of the durations of all selected shifts must not exceed a global limit H. All tasks must still be covered exactly once, and the objective remains minimizing the number of selected shifts.",
+  "value_info": [
+    "`n_tasks`: Total number of tasks to cover, given as an integer.",
+    "`shifts`: A list where shifts[i] is the list of task indices covered by shift i.",
+    "`shift_durations`: A list of integers where shift_durations[i] is the duration of shift i.",
+    "`H`: A global integer limit representing the maximum total duration allowed across all selected shifts."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`x`: A binary list of length n_shifts. `x[i] = 1` means shift i is selected; `x[i] = 0` means it is not selected.",
+      "example": "[1,0,1,0]",
+      "type": "List[int]",
+      "size": "[n_shifts]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "cop"
+}

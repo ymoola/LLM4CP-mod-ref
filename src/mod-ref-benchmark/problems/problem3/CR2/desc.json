@@ -1,0 +1,25 @@
+{
+  "source": "modref",
+  "name": "Bus Driver Scheduling – CR2",
+  "content": "Modify the objective so that shifts may have different costs. Instead of minimizing the number of selected shifts, the model must now minimize the total cost of the chosen shifts while still covering every task exactly once. Each shift has an associated cost, and the solution must select a subset of shifts that covers each task exactly once and yields the minimum total cost.",
+  "value_info": [
+    "`n_tasks`: The total number of tasks that must each be covered exactly once.",
+    "`shifts`: A list of lists, where `shifts[i]` contains the task indices covered by shift `i`.",
+    "`shift_costs`: A list of integers where `shift_costs[i]` is the cost of selecting shift `i`."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`x`: A list of 0/1 values where `x[i] = 1` indicates that shift `i` is selected, and `x[i] = 0` otherwise.",
+      "example": "[0,1,0,1]",
+      "type": "List[int]",
+      "size": "[len(shifts)]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`total_cost`: The total cost of all selected shifts, computed as the sum of shift_costs[i] for all i with x[i] = 1.",
+      "example": "430",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}

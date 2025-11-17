@@ -1,0 +1,19 @@
+{
+  "source": "modref",
+  "name": "Bus Driver Scheduling – CR1",
+  "content": "Modify the coverage constraint so that each task must now be covered exactly two times instead of exactly once. A shift may still be selected only once. The objective remains minimizing the number of selected shifts.",
+  "value_info": [
+    "`n_tasks`: The total number of tasks to be covered.",
+    "`shifts`: A list of shifts, where each shift is represented as a list of task indices that it covers."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`x`: A list of 0/1 values of length `nShifts`, where `x[i] = 1` if shift i is selected.",
+      "example": "[0,1,0,1]",
+      "type": "List[int]",
+      "size": "[len(shifts)]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "cop"
+}
