@@ -68,10 +68,8 @@ def cr3_verify_func(data_dict, hypothesis_solution):
         f"Error: Reported total_violations={total_violations}, recomputed={computed_viol}."
     )
 
-    # 6. Verify objective matches reference model (expected 12)
     expected_violations = 12
-    assert total_violations == expected_violations, (
-        f"Error: Expected total_violations={expected_violations}, but got {total_violations}."
-    )
 
-    return "pass"
+    sol_opt = "opt" if total_violations == expected_violations else "sat"
+
+    return "pass", sol_opt
