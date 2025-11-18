@@ -1,0 +1,19 @@
+{
+  "cr": "CR1",
+  "model": "reference_model.py",
+  "timestamp": "2025-11-18 12:27:23.269115",
+  "result": "pass",
+  "output": {
+    "digits": [
+      9,
+      1,
+      2,
+      5,
+      3,
+      4,
+      7,
+      6,
+      8
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "source": "modref",
+  "name": "N-Fractions – CR2 (Permutation Invariance)",
+  "content": "Modify the original n-fractions puzzle so that the core equation a/(10b+c) + d/(10e+f) + g/(10h+i) = 1 must hold not only for the original ordering, but for all permutations of the three fractions. In other words, any permutation of the three digit groups (a, b, c), (d, e, f), (g, h, i) must still satisfy the same equality. All digits must remain distinct and between 1 and 9. The model must enforce all six permuted equations.",
+  "value_info": [
+    "`digits`: A list of 9 integers in the range 1–9 representing a,b,c,d,e,f,g,h,i.",
+    "`All digits must be distinct.`"
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`digits`: A list of the 9 digits [a,b,c,d,e,f,g,h,i] satisfying all permutation-invariant fraction equations.",
+      "example": "[1,2,3,4,5,6,7,8,9]",
+      "type": "List[int]",
+      "size": "[9]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "csp"
+}

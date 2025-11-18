@@ -1,0 +1,18 @@
+{
+  "source": "modref",
+  "name": "N-Fractions Puzzle – CR2",
+  "content": "Add a new ordering constraint to the puzzle: the three denominators BC, EF, and HI must appear in strictly increasing order. That is, the denominator formed by digits (b,c) must be less than the one formed by (e,f), which must in turn be less than the one formed by (h,i). All original puzzle constraints must continue to hold, including distinct digits and satisfaction of the main arithmetic equality.",
+  "value_info": [
+    "`digits`: A list of nine distinct integers from 1 to 9, corresponding to variables a,b,c,d,e,f,g,h,i in order."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`digits`: A list of the nine digits a..i forming the 3 fractions.",
+      "example": "[2,5,1,4,7,9,3,6,8]",
+      "type": "List[int]",
+      "size": "[9]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "csp"
+}

@@ -1,0 +1,12 @@
+The N-Fractions Puzzle is defined as follows: find nine distinct non-zero digits
+A, B, C, D, E, F, G, H, and I such that the following equation holds:
+
+      A       D       G
+     ---  +  ---  +  ---  =  1
+      BC      EF      HI
+
+where BC denotes the two-digit number 10·B + C, EF denotes 10·E + F, 
+and HI denotes 10·H + I.
+
+All nine digits must be distinct and drawn from {1,…,9}. The goal is simply
+to find a valid assignment of digits satisfying the equation; 
