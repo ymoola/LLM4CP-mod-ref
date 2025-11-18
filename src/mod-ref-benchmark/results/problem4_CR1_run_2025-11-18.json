@@ -1,0 +1,9 @@
+{
+  "cr": "CR1",
+  "model": "generated_model.py",
+  "timestamp": "2025-11-18 14:31:03.501256",
+  "model_failed": true,
+  "error": "Model execution failed:\nTraceback (most recent call last):\n  File \"/Users/yusufmoola/Desktop/UofT Y4/Thesis/LLM4CP-mod-ref/src/mod-ref-benchmark/problems/problem4/CR1/generated_model.py\", line 39, in <module>\n    model.solve(log=None)\n  File \"/Users/yusufmoola/Desktop/UofT Y4/Thesis/LLM4CP-mod-ref/.venv/lib/python3.10/site-packages/cpmpy/model.py\", line 187, in solve\n    raise NotSupportedError(\"Specify the solver when using kwargs, since they are solver-specific!\")\ncpmpy.exceptions.NotSupportedError: Specify the solver when using kwargs, since they are solver-specific!\n",
+  "output": null,
+  "result": "failed to run"
+}

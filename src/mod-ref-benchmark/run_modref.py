@@ -76,7 +76,30 @@ def run_pipeline(problem_path, cr_name, model_filename="reference_model.py"):
     unit_test_path = os.path.join(cr_path, "unit_test.py")
 
     # Step 1: Run model
-    model_output = run_model(model_path)
+    try:
+        model_output = run_model(model_path)
+    except Exception as e:
+        print(f"Model failed to run {e}, Saving result...")
+
+        os.makedirs("results", exist_ok=True)
+        out_file = f"results/{problem}_{cr_name}_run_{datetime.date.today()}.json"
+
+        fail_payload = {
+            "cr": cr_name,
+            "model": model_filename,
+            "timestamp": str(datetime.datetime.now()),
+            "model_failed": True,
+            "error": str(e),
+            "output": None,
+            "result": "failed to run"
+        }
+
+        with open(out_file, "w") as f:
+            json.dump(fail_payload, f, indent=2)
+
+        print(f"Saved failure result to {out_file}")
+        return 
+
 
     # Step 2: Load input data
     with open(input_path) as f:

@@ -10,7 +10,7 @@ demand = data['demand']
 requires = data['requires']
 
 def build_model(at_most, per_slots, demand, requires):
-    requires = cpm_array(requires)
+    requires_arr = cpm_array(requires)
     n_cars = sum(demand)
     n_options = len(at_most)
     n_types = len(demand)
@@ -20,25 +20,30 @@ def build_model(at_most, per_slots, demand, requires):
 
     model = Model()
 
+    # 1. Demand satisfaction
     model += [sum(sequence == t) == demand[t] for t in range(n_types)]
+
+    # 2. Option consistency
     for s in range(n_cars):
         for o in range(n_options):
-            model += (setup[s, o] == requires[sequence[s], o])
+            model += (setup[s, o] == requires_arr[sequence[s], o])
+
+    # 3. Capacity per option
     for o in range(n_options):
         for s in range(n_cars - per_slots[o]):
             slot_range = range(s, s + per_slots[o])
             model += (sum(setup[slot_range, o]) <= at_most[o])
 
+    # 4. No more than two identical cars consecutively
+    for i in range(2, n_cars):
+        model += ((sequence[i] == sequence[i-1]) + (sequence[i-1] == sequence[i-2]) + (sequence[i] == sequence[i-2]) <= 2)
+
     return model, sequence
 
 model, sequence = build_model(at_most, per_slots, demand, requires)
 
-n_cars = sum(demand)
-for s in range(n_cars - 2):
-    model += (sequence[s] != sequence[s+1]) | (sequence[s+1] != sequence[s+2])
-
 if model.solve():
-    seq_vals = [int(v) for v in sequence.value()]
-    print(json.dumps({"sequence": seq_vals}))
+    seq_list = sequence.value().tolist()
+    print(json.dumps({"sequence": seq_list}))
 else:
-    print(json.dumps({"sequence": []}))
+    print(json.dumps({"sequence": None}))

@@ -75,6 +75,15 @@ You are a CPMPy modeling assistant.
 === Expected Output Format (ref_sol_format) ===
 {json.dumps(ref_sol_format, indent=2)}
 
+CRITICAL INSTRUCTION ABOUT OUTPUT KEYS:
+- Keys like "var1", "var2", etc. are ONLY placeholders.
+- You MUST extract the REAL output variable names from the backtick-quoted name in the "descr" field.
+- Example: if ref_sol_format["var1"]["descr"] contains "`w`:", the output JSON must contain "w": value.
+- DO NOT output "var1" or any other placeholder key.
+- DO NOT include description text in the output.
+- The final JSON must contain ONLY the variable names and their solved values.
+- Forbidden keys: "descr", "example", "type", "size".
+
 === Instructions ===
 Your task is to generate a NEW CPMPy model implementing the change request (CR).
 
