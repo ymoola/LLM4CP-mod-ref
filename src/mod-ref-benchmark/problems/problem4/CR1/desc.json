@@ -1,0 +1,31 @@
+{
+  "source": "modref",
+  "name": "Warehouse Location – CR1",
+  "content": "Extend the Warehouse Location Problem by adding a revenue value for each store. Instead of minimizing total cost, the objective becomes maximizing profit, defined as total revenue from assigned stores minus the fixed cost of opening warehouses and the supply costs. All original feasibility constraints must still hold: each store must be supplied by exactly one warehouse, warehouses can only supply stores if opened, and warehouse capacity limits must be respected.",
+  "value_info": [
+    "`fixed_cost`: Integer, the cost of opening a warehouse.",
+    "`capacities`: List[int], capacity[j] is the maximum number of stores warehouse j can supply.",
+    "`supply_cost`: 2D List of shape [n_stores × n_warehouses], supply_cost[i][j] is the cost of supplying store i from warehouse j.",
+    "`revenue`: List[int], revenue[i] is the revenue generated from supplying store i."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`w`: List[int] of length n_stores, where w[i] is the warehouse assigned to store i.",
+      "example": "[0, 1, 1, 2, 0]",
+      "type": "List[int]",
+      "size": "[n_stores]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`o`: List[int] of length n_warehouses indicating whether a warehouse is open (1) or closed (0).",
+      "example": "[1, 0, 1]",
+      "type": "List[int]"
+    },
+    "var3": {
+      "descr": "`profit`: Integer representing total revenue minus costs.",
+      "example": "120",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}

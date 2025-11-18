@@ -1,0 +1,32 @@
+{
+  "source": "modref",
+  "name": "Warehouse Location – CR3",
+  "content": "Warehouses can now operate in an optional expanded mode. Each warehouse j has a normal capacity capacities[j] and an expanded capacity capacity_expanded[j]. Activating expanded mode requires setting a binary variable upgrade[j] = 1, which adds upgrade_cost[j] to the objective. When upgrade[j] = 0, the warehouse operates at normal capacity; when upgrade[j] = 1, its capacity increases accordingly. All stores must still be supplied by a single open warehouse, and the objective now minimizes supply cost, warehouse opening cost, and the cost of expansions.",
+  "value_info": [
+    "`fixed_cost`: Integer fixed cost for opening a warehouse.\n`capacities`: List of normal capacities per warehouse.\n`capacity_expanded`: List of expanded capacities per warehouse (must exceed capacities).\n`upgrade_cost`: Additional cost for enabling expanded mode on each warehouse.\n`supply_cost`: A 2D matrix where supply_cost[i][j] is the cost of assigning store i to warehouse j."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`w`: A list of length n_stores, where w[i] is the index of the warehouse assigned to store i.",
+      "example": "[0,2,2,4,4,1,1,2,3,4]",
+      "type": "List[int]",
+      "size": "[n_stores]"
+    },
+    "var2": {
+      "descr": "`o`: A list of binary values of length n_warehouses, where o[j] = 1 if warehouse j is open.",
+      "example": "[1,0,1,0,1]",
+      "type": "List[int]"
+    },
+    "var3": {
+      "descr": "`upgrade`: A list of binary values of length n_warehouses, where upgrade[j] = 1 if warehouse j uses the expanded capacity.",
+      "example": "[0,1,0,0,1]",
+      "type": "List[int]"
+    },
+    "var4": {
+      "descr": "`total_cost`: The total objective value after considering supply costs, fixed warehouse opening costs, and expansion costs.",
+      "example": "542",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}

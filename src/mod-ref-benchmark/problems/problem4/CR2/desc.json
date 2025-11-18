@@ -1,0 +1,33 @@
+{
+  "source": "modref",
+  "name": "Warehouse Location – CR2 (Feasibility by Distance)",
+  "content": "Add a feasibility constraint: a store may only be supplied by warehouses that are within an acceptable service distance. This is encoded by an input matrix `allowed`, where allowed[i][j] = 1 means warehouse j is permitted to serve store i. Modify the model so that w[i] = j is allowed only when allowed[i][j] = 1. All original constraints (capacity limits, store assignment, warehouse opening logic, and total cost minimization) remain unchanged.",
+  "value_info": [
+    "`capacities`: List of integers, where capacities[j] gives the maximum number of stores that warehouse j can serve.",
+    "`supply_cost`: 2D list where supply_cost[i][j] is the supply cost if store i is served from warehouse j.",
+    "`allowed`: 2D binary matrix (same shape as supply_cost) where allowed[i][j] = 1 means warehouse j may supply store i.",
+    "`n_stores`: Number of stores.",
+    "`n_warehouses`: Number of warehouses."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`w`: List of warehouse assignments for each store. w[i] is the warehouse index serving store i.",
+      "example": "[0, 1, 1, 3]",
+      "type": "List[int]",
+      "size": "[n_stores]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`o`: Binary list of open warehouses. o[j] = 1 means warehouse j is used.",
+      "example": "[1, 0, 1, 1, 0]",
+      "type": "List[int]",
+      "size": "[n_warehouses]"
+    },
+    "var3": {
+      "descr": "`total_cost`: Total supply cost plus warehouse opening costs.",
+      "example": "542",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}
