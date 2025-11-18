@@ -1,7 +1,7 @@
 {
   "source": "modref",
   "name": "Warehouse Location – CR3",
-  "content": "Warehouses can now operate in an optional expanded mode. Each warehouse j has a normal capacity capacities[j] and an expanded capacity capacity_expanded[j]. Activating expanded mode requires setting a binary variable upgrade[j] = 1, which adds upgrade_cost[j] to the objective. When upgrade[j] = 0, the warehouse operates at normal capacity; when upgrade[j] = 1, its capacity increases accordingly. All stores must still be supplied by a single open warehouse, and the objective now minimizes supply cost, warehouse opening cost, and the cost of expansions.",
+  "content": "Warehouses may optionally operate in an expanded mode. In expanded mode, a warehouse can serve more stores but requires paying an additional upgrade fee. The decision of whether to operate a warehouse normally or in expanded mode is part of the optimization. All other servicing rules apply as before.",
   "value_info": [
     "`fixed_cost`: Integer fixed cost for opening a warehouse.\n`capacities`: List of normal capacities per warehouse.\n`capacity_expanded`: List of expanded capacities per warehouse (must exceed capacities).\n`upgrade_cost`: Additional cost for enabling expanded mode on each warehouse.\n`supply_cost`: A 2D matrix where supply_cost[i][j] is the cost of assigning store i to warehouse j."
   ],

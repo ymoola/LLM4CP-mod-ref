@@ -1,7 +1,7 @@
 {
   "source": "modref",
   "name": "Warehouse Location – CR2 (Feasibility by Distance)",
-  "content": "Add a feasibility constraint: a store may only be supplied by warehouses that are within an acceptable service distance. This is encoded by an input matrix `allowed`, where allowed[i][j] = 1 means warehouse j is permitted to serve store i. Modify the model so that w[i] = j is allowed only when allowed[i][j] = 1. All original constraints (capacity limits, store assignment, warehouse opening logic, and total cost minimization) remain unchanged.",
+  "content": "Stores may only be supplied by warehouses that are within an acceptable delivery radius. Each store has a predefined set of warehouses it can be feasibly served from. Any warehouse outside this feasible service region cannot supply that store. Everything else about operations, capacity, and costs remains unchanged.",
   "value_info": [
     "`capacities`: List of integers, where capacities[j] gives the maximum number of stores that warehouse j can serve.",
     "`supply_cost`: 2D list where supply_cost[i][j] is the supply cost if store i is served from warehouse j.",
