@@ -31,24 +31,3 @@ def build_model(n_slots, n_templates, n_var, demand):
 
     return model, production, layout
 
-
-if __name__ == "__main__":
-    # Load input data
-    with open("input_data.json") as f:
-        data = json.load(f)
-
-    n_slots = data["n_slots"]
-    n_templates = data["n_templates"]
-    n_var = data["n_var"]
-    demand = data["demand"]
-
-    model, production, layout = build_model(
-        n_slots, n_templates, n_var, demand
-    )
-
-    model.solve()
-
-    print(json.dumps({
-        "production": production.value().tolist(),
-        "layout": layout.value().tolist()
-    }))

@@ -27,22 +27,3 @@ def build_model(n_tasks, shifts):
 
     return model, x
 
-
-if __name__ == "__main__":
-    # Load external input data
-    with open("input_data.json") as f:
-        data = json.load(f)
-
-    n_tasks = data["n_tasks"]
-    shifts = data["shifts"]
-
-    model, x = build_model(n_tasks, shifts)
-    model.solve()
-
-    selected = [int(v) for v in x.value()]
-    num_selected = sum(selected)
-
-    print(json.dumps({
-        "selected_shifts": selected,
-        "num_selected": int(num_selected)
-    }))

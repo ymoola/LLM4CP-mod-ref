@@ -37,22 +37,3 @@ def build_model(fixed_cost, capacities, costs):
     return model, w, o, c
 
 
-
-if __name__ == "__main__":
-    with open("input_data.json") as f:
-        data = json.load(f)
-
-    fixed_cost = data["fixed_cost"]
-    capacities = data["capacities"]
-    costs = data["supply_cost"]
-
-    model, w, o, c = build_model(fixed_cost, capacities, costs)
-
-    model.solve()
-
-    print(json.dumps({
-        "w": w.value().tolist(),
-        "o": [int(val) for val in o.value().tolist()],
-        "c": c.value().tolist(),
-        "total_cost": int(sum(c.value()) + fixed_cost * sum(o.value()))
-    }))
