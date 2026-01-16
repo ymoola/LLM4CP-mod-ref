@@ -13,7 +13,7 @@ def generate_model(
 ):
     """
     Generates a CPMPy model that incorporates the change request (CR)
-    using an Ollama LLM (qwen3-coder:30b).
+    using an Ollama LLM.
 
     The LLM sees:
       1. Base natural-language description (base/problem_desc.txt)

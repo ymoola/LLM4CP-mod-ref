@@ -1,7 +1,7 @@
 {
     "source": "modref",
     "name": "Car Sequencing – CR1",
-    "content": "Add a new constraint to limit consecutive identical car types: no more than two cars of the same type may appear consecutively in the production sequence. The model must still satisfy all original car sequencing constraints, including per-option capacity limits and demand satisfaction.",
+    "content": "Add a new constraint to limit consecutive identical car types: no more than two cars of the same type may appear consecutively in the production sequence.",
     "value_info": [
       "`at_most`: A list of integers specifying, for each option, the maximum number of cars that can require that option within any window of size `per_slots[o]`.\n`per_slots`: A list of integers defining the window size for each option, used to check capacity constraints.\n`demand`: A list of integers representing the number of cars required for each car type.\n`requires`: A 2D binary list of shape `[n_types × n_options]`, where `requires[t][o] = 1` indicates that car type `t` requires option `o`."
     ],
