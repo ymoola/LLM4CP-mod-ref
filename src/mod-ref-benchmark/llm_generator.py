@@ -9,7 +9,10 @@ def generate_model(
     desc_filename="desc.json",
     base_desc_filename="problem_desc.txt",
     base_model_filename="reference_model.py",
-    model_filename="generated_model.py"
+    model_filename="generated_model.py",
+    error_message=None,
+    previous_code=None,
+    attempt=None,
 ):
     """
     Generates a CPMPy model that incorporates the change request (CR)
@@ -22,6 +25,8 @@ def generate_model(
 
     It does NOT see input_data.json (values must NOT be leaked).
     The generated model must load input_data.json at runtime.
+
+    Returns (output_path, generated_code).
     """
 
   
@@ -110,6 +115,20 @@ Now generate the complete CPMPy script implementing the CR.
 Output ONLY the complete CPMPy code. No additional text.
 """
 
+    if previous_code or error_message:
+        attempt_label = attempt if attempt is not None else "unknown"
+        prompt += f"""
+
+=== Previous Attempt Code (Failed) [Attempt {attempt_label}] ===
+{previous_code or "(no previous code provided)"}
+
+=== Execution Error from Previous Attempt ===
+{error_message or "(no error provided)"}
+
+Fix the errors while preserving the required inputs/outputs and CR changes.
+Return ONLY the corrected full CPMPy Python script.
+"""
+
     print(f"prompt: \n {prompt}")
 
 
@@ -133,4 +152,4 @@ Output ONLY the complete CPMPy code. No additional text.
 
     print(f"Generated model saved to {output_path}")
 
-    return output_path
+    return output_path, code
