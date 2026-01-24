@@ -1,47 +1,42 @@
-from cpmpy import *
 import json
-
-def build_model(fixed_cost, capacities, supply_cost, revenue):
-    n_warehouses = len(capacities)
-    n_stores = len(revenue)
-
-    w = intvar(0, n_warehouses-1, shape=n_stores, name="w")
-    o = boolvar(shape=n_warehouses, name="o")
-    min_cost = min(min(row) for row in supply_cost)
-    max_cost = max(max(row) for row in supply_cost)
-    c = intvar(min_cost, max_cost, shape=n_stores, name="c")
-    profit = intvar(-10**9, 10**9, name="profit")
-
-    model = Model()
-
-    for j in range(n_warehouses):
-        model += sum(w == j) <= capacities[j]
-    for i in range(n_stores):
-        model += o[w[i]] == 1
-    for i in range(n_stores):
-        model += c[i] == sum((w[i] == j) * supply_cost[i][j] for j in range(n_warehouses))
-
-    model += profit == sum(revenue) - sum(c) - fixed_cost * sum(o)
-    model.maximize(profit)
-
-    return model, w, o, profit
+from cpmpy import *
 
 with open('input_data.json') as f:
     data = json.load(f)
 
-model, w, o, profit = build_model(
-    data['fixed_cost'],
-    data['capacities'],
-    data['supply_cost'],
-    data['revenue']
-)
+fixed_cost = data['fixed_cost']
+capacities = data['capacities']
+supply_cost = data['supply_cost']
+revenue = data['revenue']
 
-model.solve(log=None)
+n_warehouses = len(capacities)
+n_stores = len(revenue)
 
-solution = {
-    "w": [int(v.value()) for v in w],
-    "o": [int(v.value()) for v in o],
-    "profit": int(profit.value())
-}
+w = intvar(0, n_warehouses - 1, shape=n_stores, name='w')
+o = boolvar(shape=n_warehouses, name='o')
+min_cost = min(min(row) for row in supply_cost)
+max_cost = max(max(row) for row in supply_cost)
+c = intvar(min_cost, max_cost, shape=n_stores, name='c')
 
-print(json.dumps(solution))
+model = Model()
+
+for j in range(n_warehouses):
+    model += sum(w == j) <= capacities[j]
+
+for i in range(n_stores):
+    model += o[w[i]] == 1
+
+for i in range(n_stores):
+    model += c[i] == sum((w[i] == j) * supply_cost[i][j] for j in range(n_warehouses))
+
+total_revenue = sum(revenue)
+model.maximize(total_revenue - sum(c) - fixed_cost * sum(o))
+
+if model.solve():
+    w_vals = [int(v.value()) for v in w]
+    o_vals = [int(v.value()) for v in o]
+    profit_val = int(total_revenue - sum(v.value() for v in c) - fixed_cost * sum(o_vals))
+    output = {"w": w_vals, "o": o_vals, "profit": profit_val}
+    print(json.dumps(output))
+else:
+    print(json.dumps({"w": [], "o": [], "profit": None}))

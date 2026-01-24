@@ -8,22 +8,25 @@ def build_model(n_tasks, shifts, shift_costs):
     for t in range(n_tasks):
         covering = [x[i] for i, shift in enumerate(shifts) if t in shift]
         model += (sum(covering) == 1)
-    model.minimize(sum(x[i] * shift_costs[i] for i in range(n_shifts)))
+    total_cost_expr = sum(x[i] * shift_costs[i] for i in range(n_shifts))
+    model.minimize(total_cost_expr)
     return model, x
 
-def main():
-    with open('input_data.json') as f:
-        data = json.load(f)
-    n_tasks = data["n_tasks"]
-    shifts = data["shifts"]
-    shift_costs = data["shift_costs"]
-    model, x = build_model(n_tasks, shifts, shift_costs)
-    if model.solve():
-        solution = [int(v) for v in x.value()]
-        total_cost = sum(shift_costs[i] * solution[i] for i in range(len(solution)))
-        print(json.dumps({"x": solution, "total_cost": int(total_cost)}))
-    else:
-        print(json.dumps({"x": None, "total_cost": None}))
+with open('input_data.json') as f:
+    data = json.load(f)
 
-if __name__ == "__main__":
-    main()
+n_tasks = data['n_tasks']
+shifts = data['shifts']
+shift_costs = data['shift_costs']
+
+model, x = build_model(n_tasks, shifts, shift_costs)
+model.solve()
+
+x_vals = [int(val) for val in x.value()]
+total_cost = sum(shift_costs[i] * x_vals[i] for i in range(len(x_vals)))
+
+solution = {
+    'x': x_vals,
+    'total_cost': total_cost
+}
+print(json.dumps(solution))

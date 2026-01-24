@@ -14,11 +14,7 @@ for t in range(n_tasks):
     model += (sum(covering) == 2)
 
 model.minimize(sum(x))
+model.solve()
 
-solution = model.solve()
-if solution:
-    x_vals = [int(v.value()) for v in x]
-else:
-    x_vals = None
-
-print(json.dumps({'x': x_vals}))
+solution = [int(val) for val in x.value()]
+print(json.dumps({"x": solution}))
