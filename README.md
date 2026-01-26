@@ -12,3 +12,5 @@ Using LLM's for model modification and refinement in constraint programming
   Runs the chosen model (default `generated_model.py`) in the CR folder and logs stdout JSON or execution errors.
 - Validator agent (LLM review): `python3 src/mod-ref-benchmark/validator_agent.py --problem src/mod-ref-benchmark/problems/problem1 --cr CR1`  
   LLM-only review comparing generated model vs. reference model and CR; emits structured feedback (pass/needs_changes) for iterative loops with the modifier.
+- LangGraph workflow (orchestrates all agents): `python3 src/mod-ref-benchmark/langgraph_workflow/workflow.py --problem-path src/mod-ref-benchmark/problems/problem1 --cr CR1`  
+  Chains Parser → Planner → Modifier → Executor → Validator with loops on executor/validator failures. Outputs final state as JSON (stored in memory only).

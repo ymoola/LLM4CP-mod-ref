@@ -209,3 +209,4 @@ __marimo__/
 results/
 **/generated_model.py
 src/testing.ipynb
+src/mod-ref-benchmark/llms-full.txt
