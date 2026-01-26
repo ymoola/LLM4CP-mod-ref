@@ -14,20 +14,40 @@ def _number_code_lines(code: str) -> str:
     return "\n".join(f"{idx + 1:04d}: {line}" for idx, line in enumerate(code.splitlines()))
 
 
-def build_parser_schema() -> dict:
-    """Build the JSON schema used for structured output."""
+def load_parser_output(parser_json_path: Path) -> dict:
+    """Load the parser agent output, unwrapping if stored under 'parser_output'."""
+    data = json.loads(parser_json_path.read_text())
+    return data.get("parser_output", data)
+
+
+def build_planner_schema() -> dict:
+    """Schema for structured planner output."""
     return {
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "mappings": {
+            "plan": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "additionalProperties": False,
                     "properties": {
-                        "nl_snippet": {"type": "string"},
-                        "model_lines": {
+                        "change_type": {
+                            "type": "string",
+                            "enum": [
+                                "add_constraint",
+                                "modify_constraint",
+                                "remove_constraint",
+                                "add_objective",
+                                "modify_objective",
+                                "data_handling",
+                                "other",
+                            ],
+                        },
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "related_nl": {"type": "string"},
+                        "target_lines": {
                             "type": "object",
                             "additionalProperties": False,
                             "properties": {
@@ -36,22 +56,16 @@ def build_parser_schema() -> dict:
                             },
                             "required": ["start", "end"],
                         },
+                        "insert_after_line": {"type": "integer"},
                         "code_excerpt": {"type": "string"},
-                        "variables": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                        "reasoning": {"type": "string"},
+                        "strategy": {"type": "string"},
                         "confidence": {"type": "number"},
+                        "risks": {"type": "string"},
                     },
-                    "required": ["nl_snippet", "model_lines", "code_excerpt", "confidence"],
+                    "required": ["change_type", "title", "description", "related_nl", "strategy"],
                 },
             },
-            "unmapped_nl": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "unmapped_model_segments": {
+            "preserve_sections": {
                 "type": "array",
                 "items": {
                     "type": "object",
@@ -66,46 +80,58 @@ def build_parser_schema() -> dict:
                             },
                             "required": ["start", "end"],
                         },
-                        "code_excerpt": {"type": "string"},
-                        "reasoning": {"type": "string"},
+                        "reason": {"type": "string"},
                     },
-                    "required": ["model_lines", "code_excerpt"],
+                    "required": ["model_lines", "reason"],
                 },
             },
+            "notes_for_modifier": {"type": "string"},
         },
-        "required": ["mappings"],
+        "required": ["plan"],
     }
 
 
-def build_parser_prompt(
+def build_planner_prompt(
     base_nl_description: str,
+    cr_desc: dict,
     numbered_model: str,
+    parser_mapping: dict,
     schema: dict,
 ) -> str:
     schema_text = json.dumps(schema, indent=2)
+    cr_pretty = json.dumps(cr_desc, indent=2)
+    mapping_text = json.dumps(parser_mapping, indent=2)
     return f"""
-You are the Parser agent for constraint-programming models. Your goal is to align a natural language problem description with an existing CPMPy model by pinpointing which sections of code implement each NL statement.
+You are the Planner agent. Given a change request (CR) and the existing CPMPy model, produce a precise edit plan indicating what needs to change (add/modify constraints or objectives) and where.
 
-Produce a JSON object following this schema (also passed as the structured format):
+Output must follow this JSON schema (also enforced via structured output):
 {schema_text}
 
 Guidelines:
-- Use 1-based line numbers from the numbered model listing below.
-- Keep code excerpts short (just the lines that implement the NL statement).
-- Add brief reasoning and set lower confidence when unsure; never invent code or lines that are not present.
-- If a NL requirement is not represented in the code, put it in 'unmapped_nl'.
-- If code appears without a NL rationale, add it to 'unmapped_model_segments'.
+- Use 1-based line numbers from the numbered model listing.
+- Prefer pointing to existing constraints to modify; if adding, suggest nearby line to insert (insert_after_line).
+- Keep strategy concise but actionable for the Modifier agent (no full code, just how to implement).
+- Do NOT propose changes unrelated to the CR; highlight sections to preserve so the modifier avoids regressions.
+- If confidence is low, note risks.
 
-Base NL description:
+Change Request (CR) JSON:
+{cr_pretty}
+
+Base problem description (NL):
 {base_nl_description}
 
-CPMPy model with line numbers:
+Parser mapping (NL to code):
+{mapping_text}
+
+Numbered CPMPy reference model:
 {numbered_model}
 """
 
 
-def run_parser_agent(
+def run_planner_agent(
     problem_path: str,
+    cr_name: str,
+    parser_json: str,
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_path: str | None = None,
@@ -113,27 +139,37 @@ def run_parser_agent(
     temperature: float = 0.0,
 ) -> tuple[dict, Path]:
     problem_dir = Path(problem_path)
+    cr_dir = problem_dir / cr_name
     base_dir = problem_dir / "base"
 
     desc_path = base_dir / base_desc_filename
     model_path = base_dir / base_model_filename
+    cr_desc_path = cr_dir / "desc.json"
+    parser_json_path = Path(parser_json)
 
     if not desc_path.exists():
         raise FileNotFoundError(f"Missing base description at {desc_path}")
     if not model_path.exists():
         raise FileNotFoundError(f"Missing base model at {model_path}")
+    if not cr_desc_path.exists():
+        raise FileNotFoundError(f"Missing CR desc at {cr_desc_path}")
+    if not parser_json_path.exists():
+        raise FileNotFoundError(f"Missing parser JSON at {parser_json_path}")
 
     base_nl_description = desc_path.read_text()
     base_model_code = model_path.read_text()
     numbered_model = _number_code_lines(base_model_code)
 
-    schema = build_parser_schema()
-    prompt = build_parser_prompt(base_nl_description, numbered_model, schema)
+    cr_desc = json.loads(cr_desc_path.read_text())
+    parser_mapping = load_parser_output(parser_json_path)
+
+    schema = build_planner_schema()
+    prompt = build_planner_prompt(base_nl_description, cr_desc, numbered_model, parser_mapping, schema)
 
     response = ollama.chat(
         model=model_name,
         messages=[
-            {"role": "system", "content": "You map NL descriptions to CPMPy constraint code using line numbers."},
+            {"role": "system", "content": "You draft minimal, actionable edit plans for CPMPy models given a CR."},
             {"role": "user", "content": prompt},
         ],
         format=schema,
@@ -142,38 +178,43 @@ def run_parser_agent(
 
     raw_content = response["message"]["content"]
     try:
-        parsed_output = json.loads(raw_content)
+        planner_output = json.loads(raw_content)
     except json.JSONDecodeError as exc:
         raise ValueError(f"LLM did not return valid JSON: {exc}\nRaw content: {raw_content}") from exc
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     if output_path is None:
-        output_file = base_dir / f"{problem_dir.name}_parser.json"
+        output_file = cr_dir / f"{problem_dir.name}_{cr_name}_planner.json"
     else:
         output_file = Path(output_path)
         if not output_file.is_absolute():
-            output_file = base_dir / output_file
+            output_file = cr_dir / output_file
 
     payload = {
         "problem": problem_dir.name,
+        "cr": cr_name,
         "base_desc": str(desc_path),
         "base_model": str(model_path),
+        "cr_desc": str(cr_desc_path),
+        "parser_json": str(parser_json_path),
         "timestamp": timestamp,
         "llm_model": model_name,
-        "parser_output": parsed_output,
+        "planner_output": planner_output,
     }
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.write_text(json.dumps(payload, indent=2))
 
-    return parsed_output, output_file
+    return planner_output, output_file
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Parser agent: map NL description to CPMPy model constraints with structured JSON output."
+        description="Planner agent: produce an edit plan for a CR using parser mappings and the reference model."
     )
     parser.add_argument("--problem", required=True, help="Path to the problem folder (e.g., problems/problem1)")
+    parser.add_argument("--cr", required=True, help="Change request folder name (e.g., CR1)")
+    parser.add_argument("--parser-json", required=True, help="Path to the parser agent JSON output.")
     parser.add_argument(
         "--base-desc",
         default="problem_desc.txt",
@@ -191,7 +232,7 @@ def main():
     )
     parser.add_argument(
         "--output",
-        help="Optional output JSON path. Defaults to base/<problem>_parser_<timestamp>.json.",
+        help="Optional output JSON path. Defaults to <problem>/<cr>/<problem>_<cr>_planner_<timestamp>.json.",
     )
     parser.add_argument(
         "--temperature",
@@ -201,8 +242,10 @@ def main():
     )
 
     args = parser.parse_args()
-    parsed_output, output_file = run_parser_agent(
+    planner_output, output_file = run_planner_agent(
         problem_path=args.problem,
+        cr_name=args.cr,
+        parser_json=args.parser_json,
         base_desc_filename=args.base_desc,
         base_model_filename=args.base_model,
         output_path=args.output,
@@ -210,8 +253,8 @@ def main():
         temperature=args.temperature,
     )
 
-    print(f"Parser agent completed. Saved structured mapping to {output_file}")
-    print(f"Found {len(parsed_output.get('mappings', []))} mappings.")
+    print(f"Planner agent completed. Saved plan to {output_file}")
+    print(f"Planned {len(planner_output.get('plan', []))} changes.")
 
 
 if __name__ == "__main__":
