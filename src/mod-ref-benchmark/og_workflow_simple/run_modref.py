@@ -5,7 +5,7 @@ import subprocess
 import importlib.util
 import datetime
 import argparse
-from llm_generator import generate_model
+from og_workflow_simple.llm_generator import generate_model
 
 
 class GenerationFailed(RuntimeError):

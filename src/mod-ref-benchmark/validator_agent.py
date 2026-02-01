@@ -132,7 +132,7 @@ def run_validator_agent(
     output_path: str | None = None,
     model_name: str = DEFAULT_MODEL,
     temperature: float = 0.0,
-) -> tuple[dict, Path]:
+) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
     base_dir = problem_dir / "base"
@@ -181,28 +181,30 @@ def run_validator_agent(
     except json.JSONDecodeError as exc:
         raise ValueError(f"LLM did not return valid JSON: {exc}\nRaw content: {raw_content}") from exc
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    if output_path is None:
-        output_file = cr_dir / f"{problem_dir.name}_{cr_name}_validator_{timestamp}.json"
-    else:
-        output_file = Path(output_path)
-        if not output_file.is_absolute():
-            output_file = cr_dir / output_file
+    output_file: Path | None = None
+    if output_path is not False:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        if output_path is None:
+            output_file = cr_dir / f"{problem_dir.name}_{cr_name}_validator_{timestamp}.json"
+        else:
+            output_file = Path(output_path)
+            if not output_file.is_absolute():
+                output_file = cr_dir / output_file
 
-    payload = {
-        "problem": problem_dir.name,
-        "cr": cr_name,
-        "generated_model": str(generated_model_path),
-        "reference_model": str(reference_model_path),
-        "base_desc": str(base_desc_path),
-        "cr_desc": str(cr_desc_path),
-        "timestamp": timestamp,
-        "llm_model": model_name,
-        "validator_output": validator_output,
-    }
+        payload = {
+            "problem": problem_dir.name,
+            "cr": cr_name,
+            "generated_model": str(generated_model_path),
+            "reference_model": str(reference_model_path),
+            "base_desc": str(base_desc_path),
+            "cr_desc": str(cr_desc_path),
+            "timestamp": timestamp,
+            "llm_model": model_name,
+            "validator_output": validator_output,
+        }
 
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(json.dumps(payload, indent=2))
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(json.dumps(payload, indent=2))
 
     return validator_output, output_file
 

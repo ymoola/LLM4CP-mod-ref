@@ -131,13 +131,14 @@ Numbered CPMPy reference model:
 def run_planner_agent(
     problem_path: str,
     cr_name: str,
-    parser_json: str,
+    parser_json: str | None = None,
+    parser_mapping: dict | None = None,
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_path: str | None = None,
     model_name: str = DEFAULT_MODEL,
     temperature: float = 0.0,
-) -> tuple[dict, Path]:
+) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
     base_dir = problem_dir / "base"
@@ -145,7 +146,7 @@ def run_planner_agent(
     desc_path = base_dir / base_desc_filename
     model_path = base_dir / base_model_filename
     cr_desc_path = cr_dir / "desc.json"
-    parser_json_path = Path(parser_json)
+    parser_json_path = Path(parser_json) if parser_json else None
 
     if not desc_path.exists():
         raise FileNotFoundError(f"Missing base description at {desc_path}")
@@ -153,7 +154,9 @@ def run_planner_agent(
         raise FileNotFoundError(f"Missing base model at {model_path}")
     if not cr_desc_path.exists():
         raise FileNotFoundError(f"Missing CR desc at {cr_desc_path}")
-    if not parser_json_path.exists():
+    if parser_json_path is None and parser_mapping is None:
+        raise FileNotFoundError("Parser mapping not provided (need parser_json path or parser_mapping dict).")
+    if parser_json_path is not None and not parser_json_path.exists():
         raise FileNotFoundError(f"Missing parser JSON at {parser_json_path}")
 
     base_nl_description = desc_path.read_text()
@@ -161,7 +164,7 @@ def run_planner_agent(
     numbered_model = _number_code_lines(base_model_code)
 
     cr_desc = json.loads(cr_desc_path.read_text())
-    parser_mapping = load_parser_output(parser_json_path)
+    parser_mapping = parser_mapping or load_parser_output(parser_json_path)
 
     schema = build_planner_schema()
     prompt = build_planner_prompt(base_nl_description, cr_desc, numbered_model, parser_mapping, schema)
@@ -182,28 +185,30 @@ def run_planner_agent(
     except json.JSONDecodeError as exc:
         raise ValueError(f"LLM did not return valid JSON: {exc}\nRaw content: {raw_content}") from exc
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    if output_path is None:
-        output_file = cr_dir / f"{problem_dir.name}_{cr_name}_planner.json"
-    else:
-        output_file = Path(output_path)
-        if not output_file.is_absolute():
-            output_file = cr_dir / output_file
+    output_file: Path | None = None
+    if output_path is not False:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        if output_path is None:
+            output_file = cr_dir / f"{problem_dir.name}_{cr_name}_planner.json"
+        else:
+            output_file = Path(output_path)
+            if not output_file.is_absolute():
+                output_file = cr_dir / output_file
 
-    payload = {
-        "problem": problem_dir.name,
-        "cr": cr_name,
-        "base_desc": str(desc_path),
-        "base_model": str(model_path),
-        "cr_desc": str(cr_desc_path),
-        "parser_json": str(parser_json_path),
-        "timestamp": timestamp,
-        "llm_model": model_name,
-        "planner_output": planner_output,
-    }
+        payload = {
+            "problem": problem_dir.name,
+            "cr": cr_name,
+            "base_desc": str(desc_path),
+            "base_model": str(model_path),
+            "cr_desc": str(cr_desc_path),
+            "parser_json": str(parser_json_path),
+            "timestamp": timestamp,
+            "llm_model": model_name,
+            "planner_output": planner_output,
+        }
 
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(json.dumps(payload, indent=2))
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(json.dumps(payload, indent=2))
 
     return planner_output, output_file
 

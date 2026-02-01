@@ -111,7 +111,8 @@ def run_parser_agent(
     output_path: str | None = None,
     model_name: str = DEFAULT_MODEL,
     temperature: float = 0.0,
-) -> tuple[dict, Path]:
+    write_output: bool = True,
+) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
     base_dir = problem_dir / "base"
 
@@ -146,25 +147,27 @@ def run_parser_agent(
     except json.JSONDecodeError as exc:
         raise ValueError(f"LLM did not return valid JSON: {exc}\nRaw content: {raw_content}") from exc
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    if output_path is None:
-        output_file = base_dir / f"{problem_dir.name}_parser.json"
-    else:
-        output_file = Path(output_path)
-        if not output_file.is_absolute():
-            output_file = base_dir / output_file
+    output_file: Path | None = None
+    if write_output:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        if output_path is None:
+            output_file = base_dir / f"{problem_dir.name}_parser.json"
+        else:
+            output_file = Path(output_path)
+            if not output_file.is_absolute():
+                output_file = base_dir / output_file
 
-    payload = {
-        "problem": problem_dir.name,
-        "base_desc": str(desc_path),
-        "base_model": str(model_path),
-        "timestamp": timestamp,
-        "llm_model": model_name,
-        "parser_output": parsed_output,
-    }
+        payload = {
+            "problem": problem_dir.name,
+            "base_desc": str(desc_path),
+            "base_model": str(model_path),
+            "timestamp": timestamp,
+            "llm_model": model_name,
+            "parser_output": parsed_output,
+        }
 
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(json.dumps(payload, indent=2))
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(json.dumps(payload, indent=2))
 
     return parsed_output, output_file
 

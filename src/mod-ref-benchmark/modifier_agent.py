@@ -86,7 +86,8 @@ Revise the code to fix the issue while keeping all requirements above.
 def run_modifier_agent(
     problem_path: str,
     cr_name: str,
-    planner_json: str,
+    planner_json: str | None = None,
+    planner_plan: dict | None = None,
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_filename: str = "generated_model.py",
@@ -94,7 +95,7 @@ def run_modifier_agent(
     previous_code: str | None = None,
     error_message: str | None = None,
     temperature: float = 0.0,
-) -> tuple[str, Path]:
+) -> tuple[str, Path, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
     base_dir = problem_dir / "base"
@@ -102,7 +103,7 @@ def run_modifier_agent(
     desc_path = base_dir / base_desc_filename
     model_path = base_dir / base_model_filename
     cr_desc_path = cr_dir / "desc.json"
-    planner_json_path = Path(planner_json)
+    planner_json_path = Path(planner_json) if planner_json else None
 
     if not desc_path.exists():
         raise FileNotFoundError(f"Missing base description at {desc_path}")
@@ -110,7 +111,9 @@ def run_modifier_agent(
         raise FileNotFoundError(f"Missing base model at {model_path}")
     if not cr_desc_path.exists():
         raise FileNotFoundError(f"Missing CR desc at {cr_desc_path}")
-    if not planner_json_path.exists():
+    if planner_json_path is None and planner_plan is None:
+        raise FileNotFoundError("Planner plan not provided (need planner_json path or planner_plan dict).")
+    if planner_json_path is not None and not planner_json_path.exists():
         raise FileNotFoundError(f"Missing planner JSON at {planner_json_path}")
 
     base_nl_description = desc_path.read_text()
@@ -118,7 +121,7 @@ def run_modifier_agent(
     numbered_model = _number_code_lines(base_model_code)
 
     cr_desc = load_json(cr_desc_path)
-    planner_data = load_json(planner_json_path)
+    planner_data = planner_plan or load_json(planner_json_path)
     planner_plan = planner_data.get("planner_output", planner_data)
 
     prompt = build_modifier_prompt(
@@ -142,23 +145,8 @@ def run_modifier_agent(
     output_path = cr_dir / output_filename
     output_path.write_text(code)
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_payload = {
-        "problem": problem_dir.name,
-        "cr": cr_name,
-        "timestamp": timestamp,
-        "llm_model": model_name,
-        "planner_json": str(planner_json_path),
-        "base_desc": str(desc_path),
-        "base_model": str(model_path),
-        "output_file": str(output_path),
-        "error_message": error_message,
-    }
-
-    log_path = cr_dir / f"{problem_dir.name}_{cr_name}_modifier_log_{timestamp}.json"
-    log_path.write_text(json.dumps(log_payload, indent=2))
-
-    return code, output_path
+    log_path: Path | None = None
+    return code, output_path, log_path
 
 
 def main():

@@ -36,7 +36,8 @@ def run_executor_agent(
     cr_name: str,
     model_filename: str = "generated_model.py",
     timeout: int | None = None,
-) -> tuple[dict, Path]:
+    write_log: bool = True,
+) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
     model_path = cr_dir / model_filename
@@ -46,18 +47,20 @@ def run_executor_agent(
 
     model_output = run_model(model_path, timeout=timeout)
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log = {
-        "problem": problem_dir.name,
-        "cr": cr_name,
-        "model": model_filename,
-        "timestamp": timestamp,
-        "result": "success",
-        "output": model_output,
-    }
+    log_path: Path | None = None
+    if write_log:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        log = {
+            "problem": problem_dir.name,
+            "cr": cr_name,
+            "model": model_filename,
+            "timestamp": timestamp,
+            "result": "success",
+            "output": model_output,
+        }
 
-    log_path = cr_dir / f"{problem_dir.name}_{cr_name}_executor_log_{timestamp}.json"
-    log_path.write_text(json.dumps(log, indent=2))
+        log_path = cr_dir / f"{problem_dir.name}_{cr_name}_executor_log_{timestamp}.json"
+        log_path.write_text(json.dumps(log, indent=2))
 
     return model_output, log_path
 
