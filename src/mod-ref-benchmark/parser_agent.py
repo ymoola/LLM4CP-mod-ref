@@ -3,7 +3,7 @@ import datetime
 import json
 from pathlib import Path
 
-import ollama
+from llm_client import LLMClient, LLMConfig
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
@@ -44,7 +44,7 @@ def build_parser_schema() -> dict:
                         "reasoning": {"type": "string"},
                         "confidence": {"type": "number"},
                     },
-                    "required": ["nl_snippet", "model_lines", "code_excerpt", "confidence"],
+                    "required": ["nl_snippet", "model_lines", "code_excerpt", "variables", "reasoning", "confidence"],
                 },
             },
             "unmapped_nl": {
@@ -69,11 +69,11 @@ def build_parser_schema() -> dict:
                         "code_excerpt": {"type": "string"},
                         "reasoning": {"type": "string"},
                     },
-                    "required": ["model_lines", "code_excerpt"],
+                    "required": ["model_lines", "code_excerpt", "reasoning"],
                 },
             },
         },
-        "required": ["mappings"],
+        "required": ["mappings", "unmapped_nl", "unmapped_model_segments"],
     }
 
 
@@ -95,6 +95,7 @@ Guidelines:
 - Add brief reasoning and set lower confidence when unsure; never invent code or lines that are not present.
 - If a NL requirement is not represented in the code, put it in 'unmapped_nl'.
 - If code appears without a NL rationale, add it to 'unmapped_model_segments'.
+- Always include the keys 'mappings', 'unmapped_nl', and 'unmapped_model_segments' (use empty arrays if none).
 
 Base NL description:
 {base_nl_description}
@@ -109,8 +110,8 @@ def run_parser_agent(
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_path: str | None = None,
+    llm_config: dict | LLMConfig | None = None,
     model_name: str = DEFAULT_MODEL,
-    temperature: float = 0.0,
     write_output: bool = True,
 ) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
@@ -131,21 +132,20 @@ def run_parser_agent(
     schema = build_parser_schema()
     prompt = build_parser_prompt(base_nl_description, numbered_model, schema)
 
-    response = ollama.chat(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": "You map NL descriptions to CPMPy constraint code using line numbers."},
-            {"role": "user", "content": prompt},
-        ],
-        format=schema,
-        options={"temperature": temperature},
-    )
+    if llm_config is None:
+        cfg = LLMConfig(provider="ollama", model=model_name)
+    elif isinstance(llm_config, dict):
+        cfg = LLMConfig.from_dict(llm_config)
+    else:
+        cfg = llm_config
 
-    raw_content = response["message"]["content"]
-    try:
-        parsed_output = json.loads(raw_content)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"LLM did not return valid JSON: {exc}\nRaw content: {raw_content}") from exc
+    llm = LLMClient(cfg)
+    parsed_output = llm.generate_json(
+        prompt=prompt,
+        schema=schema,
+        schema_name="parser_output",
+        system="You map NL descriptions to CPMPy constraint code using line numbers.",
+    )
 
     output_file: Path | None = None
     if write_output:
@@ -188,29 +188,38 @@ def main():
         help="Filename of the base CPMPy model inside the base folder.",
     )
     parser.add_argument(
+        "--provider",
+        choices=["ollama", "openai"],
+        default="ollama",
+        help="LLM provider to use (default: ollama).",
+    )
+    parser.add_argument(
         "--model-name",
         default=DEFAULT_MODEL,
-        help="Ollama model name to use (default: gpt-oss:20b).",
+        help="Model name to use (default: gpt-oss:20b).",
     )
     parser.add_argument(
         "--output",
         help="Optional output JSON path. Defaults to base/<problem>_parser_<timestamp>.json.",
     )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="Temperature passed to the LLM for determinism (default: 0.0).",
-    )
 
     args = parser.parse_args()
+    # Convenience default when switching providers without specifying a model.
+    model_name = args.model_name
+    if args.provider == "openai" and model_name == DEFAULT_MODEL:
+        model_name = "gpt-4o-mini"
+
+    llm_config = {
+        "provider": args.provider,
+        "model": model_name,
+    }
     parsed_output, output_file = run_parser_agent(
         problem_path=args.problem,
         base_desc_filename=args.base_desc,
         base_model_filename=args.base_model,
         output_path=args.output,
-        model_name=args.model_name,
-        temperature=args.temperature,
+        llm_config=llm_config,
+        model_name=model_name,
     )
 
     print(f"Parser agent completed. Saved structured mapping to {output_file}")

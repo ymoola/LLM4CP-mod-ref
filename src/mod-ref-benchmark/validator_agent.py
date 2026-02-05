@@ -1,9 +1,10 @@
 import argparse
 import datetime
 import json
+import re
 from pathlib import Path
 
-import ollama
+from llm_client import LLMClient, LLMConfig
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
@@ -13,9 +14,37 @@ def _number_code_lines(code: str) -> str:
     """Return code with 1-based line numbers for LLM referencing."""
     return "\n".join(f"{idx + 1:04d}: {line}" for idx, line in enumerate(code.splitlines()))
 
+def extract_output_keys(ref_sol_format: dict) -> list[str]:
+    """
+    ref_sol_format uses placeholder keys like 'var1'. The real output keys are
+    embedded as backtick-quoted identifiers in each entry's 'descr' field.
+    """
+    keys: list[str] = []
+    for _, spec in (ref_sol_format or {}).items():
+        descr = (spec or {}).get("descr", "") or ""
+        m = re.search(r"`([^`]+)`", descr)
+        if not m:
+            continue
+        name = m.group(1).strip()
+        if name.endswith(":"):
+            name = name[:-1].strip()
+        if name and name not in keys:
+            keys.append(name)
+    return keys
+
 
 def build_validator_schema() -> dict:
     """Schema for structured validator output."""
+    line_range_schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "start": {"type": "integer"},
+            "end": {"type": "integer"},
+        },
+        "required": ["start", "end"],
+    }
+
     return {
         "type": "object",
         "additionalProperties": False,
@@ -44,32 +73,29 @@ def build_validator_schema() -> dict:
                         },
                         "severity": {"type": "string", "enum": ["high", "medium", "low"]},
                         "generated_lines": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {
-                                "start": {"type": "integer"},
-                                "end": {"type": "integer"},
-                            },
-                            "required": ["start", "end"],
+                            "anyOf": [line_range_schema, {"type": "null"}],
                         },
                         "reference_lines": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {
-                                "start": {"type": "integer"},
-                                "end": {"type": "integer"},
-                            },
-                            "required": ["start", "end"],
+                            "anyOf": [line_range_schema, {"type": "null"}],
                         },
                         "suggestion": {"type": "string"},
-                        "confidence": {"type": "number"},
+                        "confidence": {"type": ["number", "null"]},
                     },
-                    "required": ["title", "description", "category", "severity", "suggestion"],
+                    "required": [
+                        "title",
+                        "description",
+                        "category",
+                        "severity",
+                        "generated_lines",
+                        "reference_lines",
+                        "suggestion",
+                        "confidence",
+                    ],
                 },
             },
             "notes_for_modifier": {"type": "string"},
         },
-        "required": ["status", "summary"],
+        "required": ["status", "summary", "issues", "notes_for_modifier"],
     }
 
 
@@ -85,6 +111,7 @@ def build_validator_prompt(
     cr_text = cr_desc.get("content", "")
     value_info = json.dumps(cr_desc.get("value_info", []), indent=2)
     ref_sol_format = json.dumps(cr_desc.get("ref_sol_format", {}), indent=2)
+    expected_output_keys = extract_output_keys(cr_desc.get("ref_sol_format", {}))
     schema_text = json.dumps(schema, indent=2)
 
     return f"""
@@ -101,6 +128,7 @@ Guidelines:
 - If everything aligns, return status "pass" and leave issues empty.
 - If changes are needed, set status "needs_changes" and list concise issues with suggested fixes.
 - Be strict about loading data (no hard-coded instance values) and respecting ref_sol_format variable names.
+- If you cannot localize an issue to exact lines, set generated_lines/reference_lines to null.
 
 Base problem description (NL):
 {base_nl_description}
@@ -113,6 +141,12 @@ Parameter description (value_info):
 
 Expected output format (ref_sol_format):
 {ref_sol_format}
+
+CRITICAL INSTRUCTION ABOUT OUTPUT KEYS:
+- Keys like "var1", "var2", ... in ref_sol_format are ONLY placeholders.
+- The REAL output keys are the backtick-quoted identifiers in each ref_sol_format[*]["descr"] field.
+- For this CR, the expected top-level JSON keys are: {expected_output_keys}
+- Do NOT claim that the output should use "var1" if the descr indicates "`sequence`" (etc.).
 
 Reference CPMPy model (with line numbers):
 {numbered_reference}
@@ -130,8 +164,8 @@ def run_validator_agent(
     base_model_filename: str = "reference_model.py",
     cr_desc_filename: str = "desc.json",
     output_path: str | None = None,
+    llm_config: dict | LLMConfig | None = None,
     model_name: str = DEFAULT_MODEL,
-    temperature: float = 0.0,
 ) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
@@ -165,21 +199,40 @@ def run_validator_agent(
         schema=schema,
     )
 
-    response = ollama.chat(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": "You are a precise code reviewer for CPMPy change requests."},
-            {"role": "user", "content": prompt},
-        ],
-        format=schema,
-        options={"temperature": temperature},
-    )
-
-    raw_content = response["message"]["content"]
     try:
-        validator_output = json.loads(raw_content)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"LLM did not return valid JSON: {exc}\nRaw content: {raw_content}") from exc
+        if llm_config is None:
+            cfg = LLMConfig(provider="ollama", model=model_name)
+        elif isinstance(llm_config, dict):
+            cfg = LLMConfig.from_dict(llm_config)
+        else:
+            cfg = llm_config
+
+        llm = LLMClient(cfg)
+        validator_output = llm.generate_json(
+            prompt=prompt,
+            schema=schema,
+            schema_name="validator_output",
+            system="You are a precise code reviewer for CPMPy change requests.",
+        )
+    except Exception as exc:
+        # Fallback: synthesize a needs_changes response so the workflow can continue
+        validator_output = {
+            "status": "needs_changes",
+            "summary": "Validator LLM returned invalid JSON; see suggestion.",
+            "issues": [
+                {
+                    "title": "Validator JSON parse failure",
+                    "description": f"{exc}",
+                    "category": "other",
+                    "severity": "high",
+                    "suggestion": "Retry validation with stricter JSON formatting in the LLM call.",
+                    "confidence": 0.1,
+                    "generated_lines": {"start": 1, "end": 1},
+                    "reference_lines": {"start": 1, "end": 1},
+                }
+            ],
+            "notes_for_modifier": "Validator failed to produce parseable JSON; retry validation.",
+        }
 
     output_file: Path | None = None
     if output_path is not False:
@@ -236,22 +289,28 @@ def main():
         help="CR description filename inside the CR folder.",
     )
     parser.add_argument(
+        "--provider",
+        choices=["ollama", "openai"],
+        default="ollama",
+        help="LLM provider to use (default: ollama).",
+    )
+    parser.add_argument(
         "--model-name",
         default=DEFAULT_MODEL,
-        help="Ollama model name to use (default: gpt-oss:20b).",
+        help="Model name to use (default: gpt-oss:20b).",
     )
     parser.add_argument(
         "--output",
         help="Optional output JSON path. Defaults to <problem>/<cr>/<problem>_<cr>_validator_<timestamp>.json.",
     )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="Temperature for the LLM (default: 0.0).",
-    )
 
     args = parser.parse_args()
+
+    model_name = args.model_name
+    if args.provider == "openai" and model_name == DEFAULT_MODEL:
+        model_name = "gpt-4o-mini"
+
+    llm_config = {"provider": args.provider, "model": model_name}
 
     validator_output, output_file = run_validator_agent(
         problem_path=args.problem,
@@ -261,8 +320,8 @@ def main():
         base_model_filename=args.base_model,
         cr_desc_filename=args.cr_desc,
         output_path=args.output,
-        model_name=args.model_name,
-        temperature=args.temperature,
+        llm_config=llm_config,
+        model_name=model_name,
     )
 
     print(f"Validator agent completed. Saved report to {output_file}")

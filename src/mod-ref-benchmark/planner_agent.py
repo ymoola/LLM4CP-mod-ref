@@ -3,7 +3,7 @@ import datetime
 import json
 from pathlib import Path
 
-import ollama
+from llm_client import LLMClient, LLMConfig
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
@@ -22,6 +22,16 @@ def load_parser_output(parser_json_path: Path) -> dict:
 
 def build_planner_schema() -> dict:
     """Schema for structured planner output."""
+    line_range_schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "start": {"type": "integer"},
+            "end": {"type": "integer"},
+        },
+        "required": ["start", "end"],
+    }
+
     return {
         "type": "object",
         "additionalProperties": False,
@@ -48,21 +58,26 @@ def build_planner_schema() -> dict:
                         "description": {"type": "string"},
                         "related_nl": {"type": "string"},
                         "target_lines": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {
-                                "start": {"type": "integer"},
-                                "end": {"type": "integer"},
-                            },
-                            "required": ["start", "end"],
+                            "anyOf": [line_range_schema, {"type": "null"}],
                         },
-                        "insert_after_line": {"type": "integer"},
+                        "insert_after_line": {"type": ["integer", "null"]},
                         "code_excerpt": {"type": "string"},
                         "strategy": {"type": "string"},
-                        "confidence": {"type": "number"},
+                        "confidence": {"type": ["number", "null"]},
                         "risks": {"type": "string"},
                     },
-                    "required": ["change_type", "title", "description", "related_nl", "strategy"],
+                    "required": [
+                        "change_type",
+                        "title",
+                        "description",
+                        "related_nl",
+                        "target_lines",
+                        "insert_after_line",
+                        "code_excerpt",
+                        "strategy",
+                        "confidence",
+                        "risks",
+                    ],
                 },
             },
             "preserve_sections": {
@@ -72,13 +87,7 @@ def build_planner_schema() -> dict:
                     "additionalProperties": False,
                     "properties": {
                         "model_lines": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {
-                                "start": {"type": "integer"},
-                                "end": {"type": "integer"},
-                            },
-                            "required": ["start", "end"],
+                            **line_range_schema,
                         },
                         "reason": {"type": "string"},
                     },
@@ -87,7 +96,7 @@ def build_planner_schema() -> dict:
             },
             "notes_for_modifier": {"type": "string"},
         },
-        "required": ["plan"],
+        "required": ["plan", "preserve_sections", "notes_for_modifier"],
     }
 
 
@@ -113,6 +122,7 @@ Guidelines:
 - Keep strategy concise but actionable for the Modifier agent (no full code, just how to implement).
 - Do NOT propose changes unrelated to the CR; highlight sections to preserve so the modifier avoids regressions.
 - If confidence is low, note risks.
+- If you cannot confidently point to a location, set target_lines to null and/or insert_after_line to null (do not guess line numbers).
 
 Change Request (CR) JSON:
 {cr_pretty}
@@ -136,8 +146,8 @@ def run_planner_agent(
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_path: str | None = None,
+    llm_config: dict | LLMConfig | None = None,
     model_name: str = DEFAULT_MODEL,
-    temperature: float = 0.0,
 ) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
@@ -169,21 +179,20 @@ def run_planner_agent(
     schema = build_planner_schema()
     prompt = build_planner_prompt(base_nl_description, cr_desc, numbered_model, parser_mapping, schema)
 
-    response = ollama.chat(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": "You draft minimal, actionable edit plans for CPMPy models given a CR."},
-            {"role": "user", "content": prompt},
-        ],
-        format=schema,
-        options={"temperature": temperature},
-    )
+    if llm_config is None:
+        cfg = LLMConfig(provider="ollama", model=model_name)
+    elif isinstance(llm_config, dict):
+        cfg = LLMConfig.from_dict(llm_config)
+    else:
+        cfg = llm_config
 
-    raw_content = response["message"]["content"]
-    try:
-        planner_output = json.loads(raw_content)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"LLM did not return valid JSON: {exc}\nRaw content: {raw_content}") from exc
+    llm = LLMClient(cfg)
+    planner_output = llm.generate_json(
+        prompt=prompt,
+        schema=schema,
+        schema_name="planner_output",
+        system="You draft minimal, actionable edit plans for CPMPy models given a CR.",
+    )
 
     output_file: Path | None = None
     if output_path is not False:
@@ -231,22 +240,27 @@ def main():
         help="Filename of the base CPMPy model inside the base folder.",
     )
     parser.add_argument(
+        "--provider",
+        choices=["ollama", "openai"],
+        default="ollama",
+        help="LLM provider to use (default: ollama).",
+    )
+    parser.add_argument(
         "--model-name",
         default=DEFAULT_MODEL,
-        help="Ollama model name to use (default: gpt-oss:20b).",
+        help="Model name to use (default: gpt-oss:20b).",
     )
     parser.add_argument(
         "--output",
         help="Optional output JSON path. Defaults to <problem>/<cr>/<problem>_<cr>_planner_<timestamp>.json.",
     )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="Temperature passed to the LLM for determinism (default: 0.0).",
-    )
 
     args = parser.parse_args()
+    model_name = args.model_name
+    if args.provider == "openai" and model_name == DEFAULT_MODEL:
+        model_name = "gpt-4o-mini"
+
+    llm_config = {"provider": args.provider, "model": model_name}
     planner_output, output_file = run_planner_agent(
         problem_path=args.problem,
         cr_name=args.cr,
@@ -254,8 +268,8 @@ def main():
         base_desc_filename=args.base_desc,
         base_model_filename=args.base_model,
         output_path=args.output,
-        model_name=args.model_name,
-        temperature=args.temperature,
+        llm_config=llm_config,
+        model_name=model_name,
     )
 
     print(f"Planner agent completed. Saved plan to {output_file}")

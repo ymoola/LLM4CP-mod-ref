@@ -1,9 +1,9 @@
 import argparse
-import datetime
 import json
+import re
 from pathlib import Path
 
-import ollama
+from llm_client import LLMClient, LLMConfig
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
@@ -16,6 +16,24 @@ def _number_code_lines(code: str) -> str:
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text())
+
+def extract_output_keys(ref_sol_format: dict) -> list[str]:
+    """
+    ref_sol_format uses placeholder keys like 'var1'. The real output keys are
+    embedded as backtick-quoted identifiers in each entry's 'descr' field.
+    """
+    keys: list[str] = []
+    for _, spec in (ref_sol_format or {}).items():
+        descr = (spec or {}).get("descr", "") or ""
+        m = re.search(r"`([^`]+)`", descr)
+        if not m:
+            continue
+        name = m.group(1).strip()
+        if name.endswith(":"):
+            name = name[:-1].strip()
+        if name and name not in keys:
+            keys.append(name)
+    return keys
 
 
 def build_modifier_prompt(
@@ -30,13 +48,15 @@ def build_modifier_prompt(
     cr_text = cr_desc.get("content", "")
     value_info = cr_desc.get("value_info", [])
     ref_sol_format = cr_desc.get("ref_sol_format", {})
+    expected_output_keys = extract_output_keys(ref_sol_format)
 
     planner_text = json.dumps(planner_plan, indent=2)
     ref_sol_text = json.dumps(ref_sol_format, indent=2)
     value_info_text = json.dumps(value_info, indent=2)
 
     prompt = f"""
-You are the Modifier agent. Apply the change request to the CPMPy reference model with minimal edits, following the planner instructions. Preserve existing constraints unless a planner step says to change them. Do not remove functionality unrelated to the CR.
+You are the Modifier agent. Apply the change request to the CPMPy reference model with minimal edits, following the planner instructions. 
+Preserve existing constraints unless a planner step says to change them. Do not remove functionality unrelated to the CR. Only ouput valid Python CPMPy code NOT SURROUNDED BY MARKDOWN OR BACKTICKS.
 
 Base problem description (NL):
 {base_nl_description}
@@ -49,6 +69,12 @@ Parameter description (value_info):
 
 Expected output format (ref_sol_format):
 {ref_sol_text}
+
+CRITICAL INSTRUCTION ABOUT OUTPUT KEYS:
+- Keys like "var1", "var2", ... in ref_sol_format are ONLY placeholders.
+- You MUST output the REAL keys, extracted from the backtick-quoted identifier in each ref_sol_format[*]["descr"] field.
+- For this CR, the expected top-level JSON keys are: {expected_output_keys}
+- Example: if descr contains "`sequence`:", the output JSON must contain the key "sequence" (NOT "var1").
 
 Planner edit plan (authoritative):
 {planner_text}
@@ -66,6 +92,17 @@ Requirements:
 - Respect ref_sol_format variable names when printing the solution dictionary; avoid placeholder keys like 'var1'.
 - Output valid Python CPMPy code only; no markdown, no extra text. The final line must print the JSON.
 - If the planner suggests a new objective, set it; otherwise keep existing objective semantics unchanged.
+
+
+Formatting rules:
+  - Output ONLY valid Python CPMPy code.
+  - Do NOT include markdown, python backticks, comments, or explanations.
+  - The final line must be a print(json.dumps(...)).
+    IMPORTANT:
+        - DO NOT include any text before the Python code.
+        - DO NOT include ```python ```, just the code.
+        - DO NOT prefix with explanations, comments, markdown, or warnings.
+        - If you want to include comments, include only Python # comments.
 """
 
     if previous_code or error_message:
@@ -91,10 +128,10 @@ def run_modifier_agent(
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_filename: str = "generated_model.py",
+    llm_config: dict | LLMConfig | None = None,
     model_name: str = DEFAULT_MODEL,
     previous_code: str | None = None,
     error_message: str | None = None,
-    temperature: float = 0.0,
 ) -> tuple[str, Path, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
@@ -134,13 +171,15 @@ def run_modifier_agent(
         error_message=error_message,
     )
 
-    response = ollama.generate(
-        model=model_name,
-        prompt=prompt,
-        options={"temperature": temperature},
-    )
+    if llm_config is None:
+        cfg = LLMConfig(provider="ollama", model=model_name)
+    elif isinstance(llm_config, dict):
+        cfg = LLMConfig.from_dict(llm_config)
+    else:
+        cfg = llm_config
 
-    code = response["response"]
+    llm = LLMClient(cfg)
+    code = llm.generate_text(prompt=prompt)
 
     output_path = cr_dir / output_filename
     output_path.write_text(code)
@@ -172,27 +211,33 @@ def main():
         help="Filename for the generated CPMPy model inside the CR folder.",
     )
     parser.add_argument(
-        "--model-name",
-        default=DEFAULT_MODEL,
-        help="Ollama model name to use (default: gpt-oss:20b).",
+        "--provider",
+        choices=["ollama", "openai"],
+        default="ollama",
+        help="LLM provider to use (default: ollama).",
     )
     parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="Temperature passed to the LLM for determinism (default: 0.0).",
+        "--model-name",
+        default=DEFAULT_MODEL,
+        help="Model name to use (default: gpt-oss:20b).",
     )
 
     args = parser.parse_args()
-    code, output_path = run_modifier_agent(
+    model_name = args.model_name
+    if args.provider == "openai" and model_name == DEFAULT_MODEL:
+        model_name = "gpt-5.1-codex-max"
+
+    llm_config = {"provider": args.provider, "model": model_name}
+
+    code, output_path, _ = run_modifier_agent(
         problem_path=args.problem,
         cr_name=args.cr,
         planner_json=args.planner_json,
         base_desc_filename=args.base_desc,
         base_model_filename=args.base_model,
         output_filename=args.output_filename,
-        model_name=args.model_name,
-        temperature=args.temperature,
+        llm_config=llm_config,
+        model_name=model_name,
     )
 
     print(f"Modifier agent completed. Saved model to {output_path}")
