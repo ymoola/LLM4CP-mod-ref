@@ -1,0 +1,33 @@
+{
+  "status": "pass",
+  "result": [
+    "pass",
+    "optimal"
+  ],
+  "model_output": {
+    "layout": [
+      [
+        0,
+        0,
+        0,
+        0,
+        2,
+        5,
+        2
+      ],
+      [
+        1,
+        1,
+        1,
+        2,
+        1,
+        0,
+        3
+      ]
+    ],
+    "production": [
+      160,
+      260
+    ]
+  }
+}

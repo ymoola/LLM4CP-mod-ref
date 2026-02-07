@@ -1,36 +1,44 @@
-import json
 from cpmpy import *
+import json
 
-data = json.load(open('input_data.json'))
-n_slots = data['n_slots']
-n_templates = data['n_templates']
-n_var = data['n_var']
-demand = data['demand']
+def build_model(n_slots, n_templates, n_var, demand):
+    ub = max(demand)  # upper bound on production counts
 
-ub = max(demand) if demand else 0
+    production = intvar(1, ub, shape=n_templates, name="production")
+    layout = intvar(0, n_slots, shape=(n_templates, n_var), name="layout")
 
-production = intvar(1, ub, shape=n_templates, name="production")
-layout = intvar(0, n_slots, shape=(n_templates, n_var), name="layout")
+    model = Model()
 
-model = Model()
+    # 1. All slots in each template must be filled
+    for i in range(n_templates):
+        model += (sum(layout[i]) == n_slots)
+    # Minimum diversity: each template must contain at least 3 distinct variations
+    used = [[layout[i, v] > 0 for v in range(n_var)] for i in range(n_templates)]
+    for i in range(n_templates):
+        model += (sum(used[i]) >= 3)
 
-for i in range(n_templates):
-    model += sum(layout[i]) == n_slots
+    # 2. Demand satisfaction
+    for v in range(n_var):
+        model += (sum(production * layout[:, v]) >= demand[v])
 
-for v in range(n_var):
-    model += sum(production * layout[:, v]) >= demand[v]
+    # 3. Objective: minimize number of printed sheets
+    model.minimize(sum(production))
 
-for i in range(n_templates):
-    model += sum(layout[i, v] > 0 for v in range(n_var)) >= 3
+    return model, production, layout
 
-for i in range(n_templates - 1):
-    model += production[i] <= production[i + 1]
+if __name__ == "__main__":
+    with open("input_data.json", "r") as f:
+        data = json.load(f)
+    n_slots = data["n_slots"]
+    n_templates = data["n_templates"]
+    n_var = data["n_var"]
+    demand = data["demand"]
 
-model.minimize(sum(production))
-
-model.solve()
-
-layout_vals = [[int(layout[i, v].value()) for v in range(n_var)] for i in range(n_templates)]
-production_vals = [int(production[i].value()) for i in range(n_templates)]
-
-print(json.dumps({"layout": layout_vals, "production": production_vals}))
+    model, production, layout = build_model(n_slots, n_templates, n_var, demand)
+    if not model.solve():
+        raise ValueError("No solution found")
+    result = {
+        "layout": layout.value().tolist(),
+        "production": production.value().tolist()
+    }
+    print(json.dumps(result))

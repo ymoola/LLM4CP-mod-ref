@@ -1,38 +1,45 @@
 from cpmpy import *
 import json
-import itertools
 
-# Load parameters from input_data.json (if any)
-with open('input_data.json', 'r') as f:
-    input_data = json.load(f)
+def build_model():
+    """
+    Base CPMPy model for the N-Fractions puzzle.
+    No external parameters; this is a fixed-structure CSP.
+    """
 
-# Decision variables
-digits = intvar(1, 9, shape=9, name="digits")
-a, b, c, d, e, f, g, h, i = digits
+    # Decision variables
+    digits = intvar(1, 9, shape=9, name="digits")
+    a, b, c, d, e, f, g, h, i = digits
 
-model = Model()
+    model = Model()
 
-# All digits must be distinct
-model += AllDifferent(digits)
+    # All digits must be distinct
+    model += AllDifferent(digits)
 
-# Define two-digit numbers
-BC = 10 * b + c
-EF = 10 * e + f
-HI = 10 * h + i
+    # Fraction equation:
+    # a/(BC) + d/(EF) + g/(HI) = 1
+    #
+    # Multiply both sides by BC * EF * HI:
+    # a*EF*HI + d*BC*HI + g*BC*EF = BC*EF*HI
+    BC = 10*b + c
+    EF = 10*e + f
+    HI = 10*h + i
 
-# Groups of (numerator, denominator)
-groups = [(a, BC), (d, EF), (g, HI)]
+    model += a * EF * HI + d * BC * HI + g * BC * EF == BC * EF * HI
+    model += a * HI * EF + g * BC * EF + d * BC * HI == BC * EF * HI
+    model += d * BC * HI + a * EF * HI + g * BC * EF == BC * EF * HI
+    model += d * HI * BC + g * BC * EF + a * EF * HI == BC * EF * HI
+    model += g * BC * EF + a * EF * HI + d * BC * HI == BC * EF * HI
+    model += g * EF * BC + d * BC * HI + a * EF * HI == BC * EF * HI
 
-# Add permutation constraints
-for perm in itertools.permutations(groups, 3):
-    n1, d1 = perm[0]
-    n2, d2 = perm[1]
-    n3, d3 = perm[2]
-    model += n1 * d2 * d3 + n2 * d1 * d3 + n3 * d1 * d2 == d1 * d2 * d3
+    return model, digits
 
-# Solve the model
-if model.solve():
-    solution = [int(digits[j].value()) for j in range(9)]
-    print(json.dumps({"digits": solution}))
-else:
-    print(json.dumps({"digits": None}))
+if __name__ == "__main__":
+    with open('input_data.json') as f:
+        input_data = json.load(f)
+    model, digits = build_model()
+    if model.solve():
+        res_digits = [int(v) for v in digits.value().tolist()]
+    else:
+        res_digits = []
+    print(json.dumps({"digits": res_digits}))
