@@ -1,0 +1,24 @@
+{
+  "source": "mod-ref",
+  "name": "Blocks World - CR1",
+  "content": "The system introduces a restriction on how the table may be used during the rearrangement process. In addition to the existing rules, at most two blocks may be placed on the table temporarily unless it is already in its final goal position. A block is considered temporary if it is on the table but is not required to be on the table in the goal configuration. Blocks that are on the table and are already in their goal position do not count toward this limit.",
+  "value_info": [
+    "`start`: List[int], where start[b-1] indicates what block block b is resting on initially (0 means table).",
+    "`goal`: List[int], where goal[b-1] indicates what block block b should be resting on in the final configuration (0 means table).",
+    "`n_piles`: Integer, the maximum number of blocks that may be directly on the table at any time."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`state`: 2D List[int] of shape [n_blocks+1 × T], where state[b][t] indicates what block block b is resting on at time t (0 means table).",
+      "example": "[[0,0,0], [2,0,0], [0,0,0]]",
+      "type": "List[List[int]]",
+      "index": "blocks 1-based, time 0-based"
+    },
+    "var2": {
+      "descr": "`move`: 2D List[int] of shape [T-1 × 2], where move[t][0] is the block moved at time t and move[t][1] is the destination support.",
+      "example": "[[3,0], [1,2]]",
+      "type": "List[List[int]]"
+    }
+  },
+  "prob_type": "cop"
+}

@@ -1,0 +1,7 @@
+{
+  "start": [2, 3, 0, 0, 4],
+  "goal":  [0, 1, 2, 3, 0],
+  "n_piles": 3,
+  "temp_limit": 2,
+  "ref_opt_val": 5
+}

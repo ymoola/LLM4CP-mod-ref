@@ -316,7 +316,7 @@ def main():
 
     model_name = args.model_name
     if args.provider == "openai" and model_name == "gpt-oss:20b":
-        model_name = "gpt-4o-mini"
+        model_name = "gpt-5-mini-2025-08-07"
 
     llm_config = {
         "provider": args.provider,

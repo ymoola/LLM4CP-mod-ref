@@ -1,0 +1,12 @@
+In the Blocks World problem, we are given a set of blocks arranged in piles and must
+transform a start configuration into a goal configuration using the shortest possible
+sequence of moves. A move selects one free block (a block with nothing on top of it)
+and places it either on the table or on top of another free block.
+
+At most k piles may be used at any time, so the number of blocks that can be directly
+on the table is limited by k. Both the start and goal configurations are represented by
+an array where entry b indicates what block block b+1 is resting on (0 means table).
+
+The aim is to minimize the number of moves needed to transform the start
+configuration into the goal configuration while respecting the move rules and
+the maximum number of piles.
