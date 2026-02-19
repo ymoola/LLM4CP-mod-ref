@@ -4,6 +4,8 @@ def handle_assertions(fn):
     def wrap(*a, **kw):
         try:
             return fn(*a, **kw)
+        except AssertionError as e:
+            return ("fail", str(e))
         except Exception as e:
             return {
                 "err": repr(str(e)),

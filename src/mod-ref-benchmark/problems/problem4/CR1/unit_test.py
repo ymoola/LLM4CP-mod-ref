@@ -6,6 +6,8 @@ def handle_assertions(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except AssertionError as e:
+            return ("fail", str(e))
         except Exception as e:
             return {
                 "err": repr(str(e)),
