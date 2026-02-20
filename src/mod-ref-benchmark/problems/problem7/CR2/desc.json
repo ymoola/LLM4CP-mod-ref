@@ -1,0 +1,20 @@
+{
+  "source": "modref",
+  "name": "Social Golfers - CR2",
+  "content": "The club would now like to ensure that the schedule promotes full social interaction. Instead of requiring that golfer pairs never repeat, the new requirement is that every pair of golfers must play together at least twice over the entire schedule.",
+  "value_info": [
+    "`n_groups`: Integer, number of groups in each round.",
+    "`n_per_group`: Integer, number of golfers per group.",
+    "`n_rounds`: Integer, total number of rounds."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`schedule`: 2D List[int] of shape [n_rounds x n_players], where schedule[r][p] is the group index assigned to player p in round r.",
+      "example": "[[0,0,1,1], [0,1,0,1], [0,1,1,0]]",
+      "type": "List[List[int]]",
+      "size": "[n_rounds, n_players]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "csp"
+}
