@@ -1,0 +1,7 @@
+The coordinator of a local golf club needs help organizing weekly play.
+
+Each round, the golfers are divided into groups of equal size. Every golfer must play in exactly one group in each round, and every group must contain the same number of golfers.
+
+The schedule runs for a fixed number of rounds. The goal is to arrange the groups so that no two golfers play together in the same group more than once over the entire schedule.
+
+Given the number of groups per round, the number of golfers in each group, and the number of rounds, determine whether such a schedule exists.

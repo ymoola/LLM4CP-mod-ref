@@ -1,0 +1,24 @@
+{
+  "source": "modref",
+  "name": "Social Golfers - CR1",
+  "content": "The club recognizes that for some parameter settings, it may not be possible to completely avoid repeated pairings. Instead of requiring that no two golfers play together more than once, the schedule should now be optimized to minimize the total number of repeated pairings across all rounds.",
+  "value_info": [
+    "`n_groups`: Integer, number of groups in each round.",
+    "`n_per_group`: Integer, number of golfers per group.",
+    "`n_rounds`: Integer, total number of rounds to schedule."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`schedule`: 2D List[int] of shape [n_rounds x n_players], where schedule[r][p] is the group index assigned to player p in round r.",
+      "example": "[[0,0,1,1],[0,1,0,1]]",
+      "type": "List[List[int]]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`total_repeated_pairings`: Integer, total number of pair co-memberships beyond the first occurrence for each player pair.",
+      "example": "4",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}
