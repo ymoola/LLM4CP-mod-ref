@@ -1,0 +1,6 @@
+{
+  "n_groups": 4,
+  "n_per_group": 6,
+  "n_rounds": 4,
+  "k_min_distinct": 15
+}
