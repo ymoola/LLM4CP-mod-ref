@@ -1,0 +1,7 @@
+A project consists of several activities that must be scheduled over time. Each activity has a fixed duration and, once started, must run without interruption until it finishes.
+
+Some activities depend on others. If activity A must precede activity B, then B cannot begin until A has completed. These dependencies form a directed acyclic structure with a designated start activity and a designated finish activity, both of which have zero duration.
+
+The project also uses renewable resources. Each resource has a limited capacity at any point in time. Activities may require certain amounts of these resources while they are running, and the total usage of any resource at any time must not exceed its capacity.
+
+The goal is to determine start times for all activities so that all dependencies and resource limits are respected, and the overall project completion time is minimized.
