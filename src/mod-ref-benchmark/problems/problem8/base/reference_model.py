@@ -41,23 +41,3 @@ def build_model(horizon, capacities, jobs):
 
     return model, s
 
-
-if __name__ == "__main__":
-    import json
-
-    with open("input_data.json") as f:
-        data = json.load(f)
-
-    model, s = build_model(
-        data["horizon"],
-        data["capacities"],
-        data["jobs"]
-    )
-
-    if model.solve():
-        solution = {
-        "start_times": s.value().tolist(),
-        "makespan": int(s.value()[-1])}                   
-        print(solution)
-    else:
-        print("No solution found")
