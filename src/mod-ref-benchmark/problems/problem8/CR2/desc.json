@@ -1,0 +1,21 @@
+{
+  "source": "modref",
+  "name": "Resource-Constrained Project Scheduling - CR2",
+  "content": "Certain precedence relations now carry a maximum allowed delay. For each specified constrained precedence (i, j), the successor activity j must start no later than a given maximum delay after activity i finishes. All original precedence and resource-capacity constraints remain in force, and the objective remains to minimize project completion time.",
+  "value_info": [
+    "`horizon`: Integer upper bound on the scheduling time range.",
+    "`capacities`: List[int], where capacities[r] is the capacity of resource r.",
+    "`jobs`: List where each job is `[duration, successors, demands]`.",
+    "`max_delays`: List of triplets `[pred, succ, max_delay]`, meaning activity `succ` must start at most `max_delay` time units after `pred` finishes."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`start_times`: List[int] of length n_jobs, where start_times[i] is the start time of activity i.",
+      "example": "[0, 0, 0, 4, 9]",
+      "type": "List[int]",
+      "size": "[n_jobs]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "cop"
+}
