@@ -6,7 +6,7 @@ import sys
 import datetime
 import importlib.util
 from pathlib import Path
-from typing import TypedDict, Optional, Dict, Any, List
+from typing import TypedDict, Optional, Dict, Any
 
 from langgraph.graph import StateGraph, START, END 
 
@@ -54,6 +54,22 @@ class WorkflowState(TypedDict, total=False):
     unit_test_result: Dict[str, Any]
     unit_test_result_path: str
     termination_reason: str
+    run_output_dir: str
+
+
+def _default_run_output_dir(problem_path: str, cr: str) -> Path:
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    return Path(problem_path) / cr / "results" / timestamp
+
+
+def _resolve_run_output_dir(state: WorkflowState) -> Path:
+    run_output_dir = state.get("run_output_dir")
+    if run_output_dir:
+        out_dir = Path(run_output_dir)
+    else:
+        out_dir = _default_run_output_dir(state["problem_path"], state["cr"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir
 
 
 def parser_node(state: WorkflowState) -> WorkflowState:
@@ -184,8 +200,8 @@ def unit_test_node(state: WorkflowState) -> WorkflowState:
         status = "fail"
         final_result = {"status": status, "error": str(e)}
 
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    result_path = cr_dir / f"{problem_dir.name}_{state['cr']}_unit_test_{timestamp}.json"
+    output_dir = _resolve_run_output_dir(state)
+    result_path = output_dir / f"{problem_dir.name}_{state['cr']}_unit_test.json"
     result_path.write_text(json.dumps(final_result, indent=2))
 
     return {
@@ -278,6 +294,75 @@ def build_graph() -> StateGraph:
     return graph.compile()
 
 
+def build_llm_config(
+    *,
+    provider: str,
+    model_name: str,
+    reasoning_effort: str | None = None,
+    max_output_tokens: int | None = None,
+) -> Dict[str, Any]:
+    if provider == "openai" and model_name == "gpt-oss:20b":
+        model_name = "gpt-5-mini-2025-08-07"
+    return {
+        "provider": provider,
+        "model": model_name,
+        "reasoning_effort": reasoning_effort,
+        "max_output_tokens": max_output_tokens,
+    }
+
+
+def run_workflow_once(
+    *,
+    problem_path: str,
+    cr: str,
+    llm_config: Dict[str, Any],
+    max_loops: int = 5,
+    run_output_dir: str | Path | None = None,
+) -> tuple[WorkflowState, Dict[str, Any], Path]:
+    graph = build_graph()
+
+    if run_output_dir is None:
+        out_dir = _default_run_output_dir(problem_path, cr)
+    else:
+        out_dir = Path(run_output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    state: WorkflowState = {
+        "problem": Path(problem_path).name,
+        "problem_path": problem_path,
+        "cr": cr,
+        "loop_count": 0,
+        "max_loops": max_loops,
+        "llm_config": llm_config,
+        "run_output_dir": str(out_dir),
+    }
+
+    result = graph.invoke(state)
+
+    run_log = {
+        "problem": result.get("problem"),
+        "cr": result.get("cr"),
+        "llm_config": llm_config,
+        "max_loops": max_loops,
+        "loop_count": result.get("loop_count"),
+        "termination_reason": result.get("termination_reason"),
+        "parser_output": result.get("parser_output"),
+        "planner_output": result.get("planner_output"),
+        "executor_output": result.get("executor_output"),
+        "exec_error": result.get("exec_error"),
+        "validator_output": result.get("validator_output"),
+        "validator_status": result.get("validator_status"),
+        "unit_test_result": result.get("unit_test_result"),
+        "unit_test_result_path": result.get("unit_test_result_path"),
+        "generated_model_path": result.get("generated_model_path"),
+        "run_output_dir": str(out_dir),
+    }
+    log_path = out_dir / f"{result.get('problem')}_{result.get('cr')}_workflow_log.json"
+    log_path.write_text(json.dumps(run_log, indent=2))
+
+    return result, run_log, log_path
+
+
 def main():
     parser = argparse.ArgumentParser(description="LangGraph workflow for ModRef agents.")
     parser.add_argument("--problem-path", required=True, help="Path to the problem folder (e.g., problems/problem1)")
@@ -312,51 +397,19 @@ def main():
 
     args = parser.parse_args()
 
-    graph = build_graph()
+    llm_config = build_llm_config(
+        provider=args.provider,
+        model_name=args.model_name,
+        reasoning_effort=args.reasoning_effort,
+        max_output_tokens=args.max_output_tokens,
+    )
 
-    model_name = args.model_name
-    if args.provider == "openai" and model_name == "gpt-oss:20b":
-        model_name = "gpt-5-mini-2025-08-07"
-
-    llm_config = {
-        "provider": args.provider,
-        "model": model_name,
-        "reasoning_effort": args.reasoning_effort,
-        "max_output_tokens": args.max_output_tokens,
-    }
-
-    state: WorkflowState = {
-        "problem": Path(args.problem_path).name,
-        "problem_path": args.problem_path,
-        "cr": args.cr,
-        "loop_count": 0,
-        "max_loops": args.max_loops,
-        "llm_config": llm_config,
-    }
-
-    result = graph.invoke(state)
-    # Aggregate run log (single file)
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    cr_dir = Path(args.problem_path) / args.cr
-    run_log = {
-        "problem": result.get("problem"),
-        "cr": result.get("cr"),
-        "llm_config": llm_config,
-        "max_loops": args.max_loops,
-        "loop_count": result.get("loop_count"),
-        "termination_reason": result.get("termination_reason"),
-        "parser_output": result.get("parser_output"),
-        "planner_output": result.get("planner_output"),
-        "executor_output": result.get("executor_output"),
-        "exec_error": result.get("exec_error"),
-        "validator_output": result.get("validator_output"),
-        "validator_status": result.get("validator_status"),
-        "unit_test_result": result.get("unit_test_result"),
-        "unit_test_result_path": result.get("unit_test_result_path"),
-        "generated_model_path": result.get("generated_model_path"),
-    }
-    log_path = cr_dir / f"{result.get('problem')}_{result.get('cr')}_workflow_log_{timestamp}.json"
-    log_path.write_text(json.dumps(run_log, indent=2))
+    result, run_log, log_path = run_workflow_once(
+        problem_path=args.problem_path,
+        cr=args.cr,
+        llm_config=llm_config,
+        max_loops=args.max_loops,
+    )
 
     print(json.dumps(run_log, indent=2))
     print(f"Run log saved to {log_path}")
