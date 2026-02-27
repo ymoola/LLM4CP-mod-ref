@@ -1,9 +1,0 @@
-{
-  "cr": "CR3",
-  "model": "generated_model.py",
-  "timestamp": "2025-11-18 13:24:42.711999",
-  "model_failed": true,
-  "error": "Model execution failed:\nTraceback (most recent call last):\n  File \"/Users/yusufmoola/Desktop/UofT Y4/Thesis/LLM4CP-mod-ref/src/mod-ref-benchmark/problems/problem1/CR3/generated_model.py\", line 45, in <module>\n    main()\n  File \"/Users/yusufmoola/Desktop/UofT Y4/Thesis/LLM4CP-mod-ref/src/mod-ref-benchmark/problems/problem1/CR3/generated_model.py\", line 37, in main\n    seq_vals = [int(sequence[i]) for i in range(len(sequence))]\n  File \"/Users/yusufmoola/Desktop/UofT Y4/Thesis/LLM4CP-mod-ref/src/mod-ref-benchmark/problems/problem1/CR3/generated_model.py\", line 37, in <listcomp>\n    seq_vals = [int(sequence[i]) for i in range(len(sequence))]\nTypeError: int() argument must be a string, a bytes-like object or a real number, not '_IntVarImpl'\n",
-  "output": null,
-  "result": "failed to run"
-}

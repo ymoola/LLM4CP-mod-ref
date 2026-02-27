@@ -1,9 +1,0 @@
-{
-  "cr": "CR1",
-  "model": "generated_model.py",
-  "timestamp": "2025-11-18 15:25:16.142833",
-  "model_failed": true,
-  "error": "Model execution failed:\nTraceback (most recent call last):\n  File \"/Users/yusufmoola/Desktop/UofT Y4/Thesis/LLM4CP-mod-ref/src/mod-ref-benchmark/problems/problem5/CR1/generated_model.py\", line 40, in <module>\n    solver = Solver(name='gurobi')\nNameError: name 'Solver' is not defined. Did you mean: 'solvers'?\n",
-  "output": null,
-  "result": "failed to run"
-}
