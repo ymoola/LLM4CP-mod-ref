@@ -1,0 +1,21 @@
+{
+  "source": "modref",
+  "name": "Resource-Constrained Project Scheduling - CR3",
+  "content": "Some resources are unavailable during specified maintenance windows. Any activity that requires such a resource is not allowed to overlap the corresponding unavailable window. All original precedence and resource-capacity constraints remain in force, and the objective remains to minimize project completion time.",
+  "value_info": [
+    "`horizon`: Integer upper bound on the scheduling time range.",
+    "`capacities`: List[int], where capacities[r] is the capacity of resource r.",
+    "`jobs`: List where each job is `[duration, successors, demands]`.",
+    "`unavailable_windows`: List of triplets `[resource, start, end]`, meaning the resource is unavailable on interval `[start, end)`."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`start_times`: List[int] of length n_jobs, where start_times[i] is the start time of activity i.",
+      "example": "[0, 0, 0, 9, 9, 14, 17, 21]",
+      "type": "List[int]",
+      "size": "[n_jobs]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "cop"
+}
