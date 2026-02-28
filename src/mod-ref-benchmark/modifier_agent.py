@@ -89,6 +89,7 @@ Requirements:
 - Implement the planner steps (add/modify constraints/objective) precisely; prefer editing the pointed line ranges or inserting after suggested lines.
 - Keep all other constraints and structure intact.
 - Load all numeric parameters from 'input_data.json' at runtime using the names from value_info; never hard-code instance data.
+- Do NOT add hardcoded solve limits (e.g., model.solve(time_limit=...)) unless the CR explicitly requests runtime limiting; otherwise use plain model.solve().
 - Respect ref_sol_format variable names when printing the solution dictionary; avoid placeholder keys like 'var1'.
 - Output valid Python CPMPy code only; no markdown, no extra text. The final line must print the JSON.
 - If the planner suggests a new objective, set it; otherwise keep existing objective semantics unchanged.
