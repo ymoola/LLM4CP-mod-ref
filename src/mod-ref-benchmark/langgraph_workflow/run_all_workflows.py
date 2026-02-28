@@ -50,10 +50,16 @@ def main():
         help="Optional max output tokens for OpenAI.",
     )
     parser.add_argument(
-        "--max-loops",
+        "--max-exec-error-loops",
         type=int,
         default=5,
-        help="Maximum modifier/executor/validator loops before stopping.",
+        help="Maximum number of execution-error retries before failing.",
+    )
+    parser.add_argument(
+        "--max-validation-error-loops",
+        type=int,
+        default=5,
+        help="Maximum number of validation-error retries before forcing unit test on current executable model.",
     )
     parser.add_argument(
         "--executor-timeout",
@@ -107,7 +113,8 @@ def main():
                     problem_path=str(problem_dir),
                     cr=cr_dir.name,
                     llm_config=llm_config,
-                    max_loops=args.max_loops,
+                    max_exec_error_loops=args.max_exec_error_loops,
+                    max_validation_error_loops=args.max_validation_error_loops,
                     executor_timeout=args.executor_timeout,
                     run_output_dir=case_output_dir,
                 )
@@ -144,7 +151,8 @@ def main():
     summary = {
         "timestamp": summary_timestamp,
         "llm_config": llm_config,
-        "max_loops": args.max_loops,
+        "max_exec_error_loops": args.max_exec_error_loops,
+        "max_validation_error_loops": args.max_validation_error_loops,
         "executor_timeout": args.executor_timeout,
         "counts": {
             "total": len(all_results),

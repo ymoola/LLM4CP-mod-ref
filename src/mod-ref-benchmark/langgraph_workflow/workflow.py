@@ -50,7 +50,10 @@ class WorkflowState(TypedDict, total=False):
     validator_output: Dict[str, Any]
     error_message: str
     loop_count: int
-    max_loops: int
+    exec_error_count: int
+    validation_error_count: int
+    max_exec_error_loops: int
+    max_validation_error_loops: int
     unit_test_result: Dict[str, Any]
     unit_test_result_path: str
     termination_reason: str
@@ -71,6 +74,18 @@ def _resolve_run_output_dir(state: WorkflowState) -> Path:
         out_dir = _default_run_output_dir(state["problem_path"], state["cr"])
     out_dir.mkdir(parents=True, exist_ok=True)
     return out_dir
+
+
+def _max_exec_error_loops(state: WorkflowState) -> int:
+    if state.get("max_exec_error_loops") is not None:
+        return int(state["max_exec_error_loops"])
+    return 5
+
+
+def _max_validation_error_loops(state: WorkflowState) -> int:
+    if state.get("max_validation_error_loops") is not None:
+        return int(state["max_validation_error_loops"])
+    return 5
 
 
 def parser_node(state: WorkflowState) -> WorkflowState:
@@ -143,9 +158,19 @@ def executor_node(state: WorkflowState) -> WorkflowState:
             timeout=timeout,
             write_log=False,
         )
-        return {"exec_ok": True, "exec_error": None, "executor_output": model_output}
+        return {
+            "exec_ok": True,
+            "exec_error": None,
+            "executor_output": model_output,
+        }
     except Exception as e:
-        return {"exec_ok": False, "exec_error": str(e), "error_message": str(e)}
+        exec_error_count = int(state.get("exec_error_count", 0) or 0) + 1
+        return {
+            "exec_ok": False,
+            "exec_error": str(e),
+            "error_message": str(e),
+            "exec_error_count": exec_error_count,
+        }
 
 
 def validator_node(state: WorkflowState) -> WorkflowState:
@@ -159,7 +184,9 @@ def validator_node(state: WorkflowState) -> WorkflowState:
     )
     status = validator_output.get("status", "needs_changes")
     feedback = None
+    validation_error_count = int(state.get("validation_error_count", 0) or 0)
     if status != "pass":
+        validation_error_count += 1
         issues = validator_output.get("issues", [])
         print("[workflow] Validator returned needs_changes. Issues:")
         print(json.dumps(issues, indent=2))
@@ -177,6 +204,7 @@ def validator_node(state: WorkflowState) -> WorkflowState:
         "validator_status": status,
         "validator_output": validator_output,
         "error_message": feedback,
+        "validation_error_count": validation_error_count,
     }
 
 
@@ -209,18 +237,26 @@ def unit_test_node(state: WorkflowState) -> WorkflowState:
     result_path = output_dir / f"{problem_dir.name}_{state['cr']}_unit_test.json"
     result_path.write_text(json.dumps(final_result, indent=2))
 
+    termination_reason = state.get("termination_reason")
+    if (
+        termination_reason is None
+        and state.get("validator_status") != "pass"
+        and int(state.get("validation_error_count", 0) or 0) >= _max_validation_error_loops(state)
+    ):
+        termination_reason = "max_validation_error_loops_reached_ran_unit_test"
+
     return {
         "unit_test_result": final_result,
         "unit_test_result_path": str(result_path),
+        "termination_reason": termination_reason,
     }
 
 
 def route_after_executor(state: WorkflowState) -> str:
-    # Always validate if the model runs successfully (even if we hit max_loops),
-    # so we can capture validator feedback/status before terminating.
+    # Always validate if the model runs successfully.
     if state.get("exec_ok"):
         return "validator"
-    if state.get("loop_count", 0) >= state.get("max_loops", 5):
+    if int(state.get("exec_error_count", 0) or 0) >= _max_exec_error_loops(state):
         return "finalize"
     return "modifier"
 
@@ -228,32 +264,33 @@ def route_after_executor(state: WorkflowState) -> str:
 def route_after_validator(state: WorkflowState) -> str:
     if state.get("validator_status") == "pass":
         return "unit_test"
-    if state.get("loop_count", 0) >= state.get("max_loops", 5):
+    if int(state.get("validation_error_count", 0) or 0) >= _max_validation_error_loops(state):
+        if state.get("exec_ok"):
+            return "unit_test"
         return "finalize"
     return "modifier"
 
 
 def finalize_node(state: WorkflowState) -> WorkflowState:
-    """Ensure final state explains why we stopped (esp. when max_loops is reached)."""
-    loop_count = int(state.get("loop_count", 0) or 0)
-    max_loops = int(state.get("max_loops", 5) or 5)
+    """Ensure final state explains why we stopped."""
     exec_ok = state.get("exec_ok")
     validator_status = state.get("validator_status")
+    exec_error_count = int(state.get("exec_error_count", 0) or 0)
+    validation_error_count = int(state.get("validation_error_count", 0) or 0)
+    max_exec_error_loops = _max_exec_error_loops(state)
+    max_validation_error_loops = _max_validation_error_loops(state)
 
-    if loop_count >= max_loops:
-        if exec_ok is False:
-            reason = "max_loops_reached_executor_error"
-        elif validator_status and validator_status != "pass":
-            reason = "max_loops_reached_validator_not_passed"
-        else:
-            reason = "max_loops_reached"
+    if exec_ok is False and exec_error_count >= max_exec_error_loops:
+        reason = "max_exec_error_loops_reached"
+    elif validator_status and validator_status != "pass" and validation_error_count >= max_validation_error_loops:
+        reason = "max_validation_error_loops_reached"
     else:
         reason = "terminated"
 
     updates: WorkflowState = {"termination_reason": reason}
 
-    # If we stopped due to max_loops without an executor error, still surface a non-null error string.
-    if not state.get("exec_error") and reason.startswith("max_loops_reached"):
+    # If we stop due to loop limits without an executor error, surface a non-null error string.
+    if not state.get("exec_error") and reason in {"max_exec_error_loops_reached", "max_validation_error_loops_reached"}:
         updates["exec_error"] = f"Workflow stopped: {reason}"
 
     # If we terminate before validation ran, make it explicit in the final log.
@@ -321,7 +358,8 @@ def run_workflow_once(
     problem_path: str,
     cr: str,
     llm_config: Dict[str, Any],
-    max_loops: int = 5,
+    max_exec_error_loops: int = 5,
+    max_validation_error_loops: int = 5,
     executor_timeout: int = 30,
     run_output_dir: str | Path | None = None,
 ) -> tuple[WorkflowState, Dict[str, Any], Path]:
@@ -344,7 +382,10 @@ def run_workflow_once(
         "problem_path": problem_path,
         "cr": cr,
         "loop_count": 0,
-        "max_loops": max_loops,
+        "exec_error_count": 0,
+        "validation_error_count": 0,
+        "max_exec_error_loops": max_exec_error_loops,
+        "max_validation_error_loops": max_validation_error_loops,
         "llm_config": llm_config,
         "run_output_dir": str(out_dir),
         "executor_timeout": timeout_value,
@@ -356,9 +397,12 @@ def run_workflow_once(
         "problem": result.get("problem"),
         "cr": result.get("cr"),
         "llm_config": llm_config,
-        "max_loops": max_loops,
+        "max_exec_error_loops": max_exec_error_loops,
+        "max_validation_error_loops": max_validation_error_loops,
         "executor_timeout": timeout_value,
         "loop_count": result.get("loop_count"),
+        "exec_error_count": result.get("exec_error_count"),
+        "validation_error_count": result.get("validation_error_count"),
         "termination_reason": result.get("termination_reason"),
         "parser_output": result.get("parser_output"),
         "planner_output": result.get("planner_output"),
@@ -403,10 +447,16 @@ def main():
         help="Optional max output tokens for OpenAI Responses API (ignored by ollama).",
     )
     parser.add_argument(
-        "--max-loops",
+        "--max-exec-error-loops",
         type=int,
         default=5,
-        help="Maximum modifier/executor/validator loops before stopping.",
+        help="Maximum number of execution-error retries before failing.",
+    )
+    parser.add_argument(
+        "--max-validation-error-loops",
+        type=int,
+        default=5,
+        help="Maximum number of validation-error retries before forcing unit test on current executable model.",
     )
     parser.add_argument(
         "--executor-timeout",
@@ -428,7 +478,8 @@ def main():
         problem_path=args.problem_path,
         cr=args.cr,
         llm_config=llm_config,
-        max_loops=args.max_loops,
+        max_exec_error_loops=args.max_exec_error_loops,
+        max_validation_error_loops=args.max_validation_error_loops,
         executor_timeout=args.executor_timeout,
     )
 
