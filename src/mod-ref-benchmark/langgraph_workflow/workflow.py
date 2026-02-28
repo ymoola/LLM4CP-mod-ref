@@ -55,6 +55,7 @@ class WorkflowState(TypedDict, total=False):
     unit_test_result_path: str
     termination_reason: str
     run_output_dir: str
+    executor_timeout: Optional[int]
 
 
 def _default_run_output_dir(problem_path: str, cr: str) -> Path:
@@ -133,11 +134,13 @@ def modifier_node(state: WorkflowState) -> WorkflowState:
 
 def executor_node(state: WorkflowState) -> WorkflowState:
     print(f"[workflow] Stage: executor | cr={state.get('cr')}")
+    timeout = state.get("executor_timeout")
     try:
         model_output, _ = run_executor_agent(
             problem_path=state["problem_path"],
             cr_name=state["cr"],
             model_filename=Path(state["generated_model_path"]).name,
+            timeout=timeout,
             write_log=False,
         )
         return {"exec_ok": True, "exec_error": None, "executor_output": model_output}
@@ -184,11 +187,13 @@ def unit_test_node(state: WorkflowState) -> WorkflowState:
     unit_test_path = cr_dir / "unit_test.py"
     input_path = cr_dir / "input_data.json"
 
+    timeout = state.get("executor_timeout")
     try:
         model_output, _ = run_executor_agent(
             problem_path=state["problem_path"],
             cr_name=state["cr"],
             model_filename=Path(state["generated_model_path"]).name,
+            timeout=timeout,
             write_log=False,
         )
         input_data = json.loads(input_path.read_text())
@@ -317,6 +322,7 @@ def run_workflow_once(
     cr: str,
     llm_config: Dict[str, Any],
     max_loops: int = 5,
+    executor_timeout: int = 30,
     run_output_dir: str | Path | None = None,
 ) -> tuple[WorkflowState, Dict[str, Any], Path]:
     graph = build_graph()
@@ -327,6 +333,12 @@ def run_workflow_once(
         out_dir = Path(run_output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    timeout_value: int | None
+    if executor_timeout and executor_timeout > 0:
+        timeout_value = int(executor_timeout)
+    else:
+        timeout_value = None
+
     state: WorkflowState = {
         "problem": Path(problem_path).name,
         "problem_path": problem_path,
@@ -335,6 +347,7 @@ def run_workflow_once(
         "max_loops": max_loops,
         "llm_config": llm_config,
         "run_output_dir": str(out_dir),
+        "executor_timeout": timeout_value,
     }
 
     result = graph.invoke(state)
@@ -344,6 +357,7 @@ def run_workflow_once(
         "cr": result.get("cr"),
         "llm_config": llm_config,
         "max_loops": max_loops,
+        "executor_timeout": timeout_value,
         "loop_count": result.get("loop_count"),
         "termination_reason": result.get("termination_reason"),
         "parser_output": result.get("parser_output"),
@@ -394,6 +408,12 @@ def main():
         default=5,
         help="Maximum modifier/executor/validator loops before stopping.",
     )
+    parser.add_argument(
+        "--executor-timeout",
+        type=int,
+        default=30,
+        help="Per execution timeout in seconds for generated models (0 disables timeout).",
+    )
 
     args = parser.parse_args()
 
@@ -409,6 +429,7 @@ def main():
         cr=args.cr,
         llm_config=llm_config,
         max_loops=args.max_loops,
+        executor_timeout=args.executor_timeout,
     )
 
     print(json.dumps(run_log, indent=2))

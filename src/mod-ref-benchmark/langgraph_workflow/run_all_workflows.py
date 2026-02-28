@@ -56,6 +56,12 @@ def main():
         help="Maximum modifier/executor/validator loops before stopping.",
     )
     parser.add_argument(
+        "--executor-timeout",
+        type=int,
+        default=30,
+        help="Per execution timeout in seconds for generated models (0 disables timeout).",
+    )
+    parser.add_argument(
         "--only-problem",
         help="Optional: run only a specific problem folder name (e.g., problem1).",
     )
@@ -102,6 +108,7 @@ def main():
                     cr=cr_dir.name,
                     llm_config=llm_config,
                     max_loops=args.max_loops,
+                    executor_timeout=args.executor_timeout,
                     run_output_dir=case_output_dir,
                 )
                 all_results.append(
@@ -138,6 +145,7 @@ def main():
         "timestamp": summary_timestamp,
         "llm_config": llm_config,
         "max_loops": args.max_loops,
+        "executor_timeout": args.executor_timeout,
         "counts": {
             "total": len(all_results),
             "pass": sum(1 for r in all_results if r.get("status") == "pass"),
