@@ -88,6 +88,14 @@ def _max_validation_error_loops(state: WorkflowState) -> int:
     return 5
 
 
+def _is_unit_test_pass(verify_result: Any) -> bool:
+    if verify_result == "pass":
+        return True
+    if isinstance(verify_result, (list, tuple)) and verify_result and verify_result[0] == "pass":
+        return True
+    return False
+
+
 def parser_node(state: WorkflowState) -> WorkflowState:
     print(f"[workflow] Stage: parser | problem={state.get('problem_path')} cr={state.get('cr')}")
     parser_output, parser_path = run_parser_agent(
@@ -227,7 +235,7 @@ def unit_test_node(state: WorkflowState) -> WorkflowState:
         input_data = json.loads(input_path.read_text())
         verify_func = load_verify_func(unit_test_path)
         result = verify_func(input_data, model_output)
-        status = "pass"
+        status = "pass" if _is_unit_test_pass(result) else "fail"
         final_result = {"status": status, "result": result, "model_output": model_output}
     except Exception as e:
         status = "fail"
