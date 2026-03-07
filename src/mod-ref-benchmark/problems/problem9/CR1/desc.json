@@ -1,0 +1,37 @@
+{
+  "source": "modref",
+  "name": "Vessel Deck Container Placement - CR1",
+  "content": "Containers may now be rotated by 90 degrees when placed on the deck. For each container, width and length can be swapped when determining occupied space.",
+  "value_info": [
+    "`deck_width`: Integer deck width.",
+    "`deck_length`: Integer deck length.",
+    "`n_containers`: Integer number of containers.",
+    "`width`: List[int], original widths of containers.",
+    "`length`: List[int], original lengths of containers.",
+    "`classes`: List[int], class index (1-based) of each container.",
+    "`separation`: 2D List[int], minimum pairwise class separation matrix."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`x`: List[int] of length n_containers, bottom-left x-coordinate for each container.",
+      "example": "[0, 3, 3]",
+      "type": "List[int]",
+      "size": "[n_containers]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`y`: List[int] of length n_containers, bottom-left y-coordinate for each container.",
+      "example": "[0, 0, 3]",
+      "type": "List[int]",
+      "size": "[n_containers]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`rot`: List[int] of length n_containers, where rot[i]=1 means container i is rotated by 90 degrees.",
+      "example": "[1, 0, 0]",
+      "type": "List[int]",
+      "size": "[n_containers]"
+    }
+  },
+  "prob_type": "csp"
+}
