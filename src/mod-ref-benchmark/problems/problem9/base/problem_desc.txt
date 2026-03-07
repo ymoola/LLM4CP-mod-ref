@@ -1,0 +1,5 @@
+A supply vessel transports containers between offshore sites. The deck of the vessel is rectangular, and a set of containers must be placed on the deck. Each container has a fixed width and length and must be placed parallel to the sides of the deck.
+
+Containers belong to different classes depending on their contents. For safety reasons, certain classes of containers must be separated from each other by minimum distances either along the length of the deck or across its width.
+
+The goal is to determine whether all containers can be placed on the deck such that no containers overlap and all required separation distances between container classes are satisfied.
