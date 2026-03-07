@@ -1,0 +1,20 @@
+{
+  "deck_width": 12,
+  "deck_length": 10,
+  "n_containers": 5,
+  "n_classes": 2,
+
+  "width": [4, 3, 3, 2, 2],
+  "length": [3, 4, 2, 3, 2],
+
+  "classes": [1, 1, 2, 2, 1],
+  "separation": [
+    [0, 1],
+    [1, 0]
+  ],
+
+  "restricted_regions": [
+    [4, 2, 2, 3],
+    [9, 4, 2, 2]
+  ]
+}

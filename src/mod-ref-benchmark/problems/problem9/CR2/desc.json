@@ -1,0 +1,32 @@
+{
+  "source": "modref",
+  "name": "Vessel Deck Container Placement - CR2",
+  "content": "Certain rectangular areas of the deck are reserved for equipment and cannot be used for container placement. Every container must be positioned entirely outside all restricted regions. All original deck-boundary, non-overlap, and class-separation constraints remain in force.",
+  "value_info": [
+    "`deck_width`: Integer deck width.",
+    "`deck_length`: Integer deck length.",
+    "`n_containers`: Integer number of containers.",
+    "`width`: List[int], widths of containers.",
+    "`length`: List[int], lengths of containers.",
+    "`classes`: List[int], class index (1-based) of each container.",
+    "`separation`: 2D List[int], minimum pairwise class separation matrix.",
+    "`restricted_regions`: List of rectangles `[rx, ry, rw, rl]` describing forbidden deck regions."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`x`: List[int] of length n_containers, bottom-left x-coordinate for each container.",
+      "example": "[0, 0, 5, 7, 10]",
+      "type": "List[int]",
+      "size": "[n_containers]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`y`: List[int] of length n_containers, bottom-left y-coordinate for each container.",
+      "example": "[0, 4, 0, 7, 0]",
+      "type": "List[int]",
+      "size": "[n_containers]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "csp"
+}
