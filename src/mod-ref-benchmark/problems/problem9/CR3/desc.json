@@ -1,0 +1,43 @@
+{
+  "source": "modref",
+  "name": "Vessel Deck Container Placement - CR3",
+  "content": "Each container now has an associated priority value. Instead of requiring all containers to be placed, the model may choose a subset of containers to load. The objective is to maximize the total value of loaded containers while respecting deck-boundary, non-overlap, and class-separation constraints among loaded containers.",
+  "value_info": [
+    "`deck_width`: Integer deck width.",
+    "`deck_length`: Integer deck length.",
+    "`n_containers`: Integer number of candidate containers.",
+    "`width`: List[int], widths of containers.",
+    "`length`: List[int], lengths of containers.",
+    "`classes`: List[int], class index (1-based) of each container.",
+    "`separation`: 2D List[int], minimum pairwise class separation matrix.",
+    "`priority`: List[int], value contributed if the corresponding container is loaded."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`x`: List[int] of length n_containers, bottom-left x-coordinate for each container (relevant when loaded).",
+      "example": "[0, 0, 4, 4, 4, 0]",
+      "type": "List[int]",
+      "size": "[n_containers]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`y`: List[int] of length n_containers, bottom-left y-coordinate for each container (relevant when loaded).",
+      "example": "[0, 4, 0, 3, 5, 0]",
+      "type": "List[int]",
+      "size": "[n_containers]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`load`: List[int] of length n_containers, where load[i]=1 if container i is selected for loading, else 0.",
+      "example": "[1, 1, 1, 1, 1, 0]",
+      "type": "List[int]",
+      "size": "[n_containers]"
+    },
+    "var4": {
+      "descr": "`total_value`: Integer objective value equal to sum(priority[i] * load[i]).",
+      "example": "32",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}

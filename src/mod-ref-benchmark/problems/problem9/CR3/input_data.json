@@ -1,0 +1,18 @@
+{
+  "deck_width": 7,
+  "deck_length": 7,
+  "n_containers": 6,
+  "n_classes": 2,
+
+  "width": [4, 4, 3, 3, 2, 3],
+  "length": [4, 3, 3, 2, 2, 3],
+
+  "classes": [1, 1, 2, 2, 1, 2],
+  "separation": [
+    [0, 0],
+    [0, 0]
+  ],
+
+  "priority": [12, 10, 9, 7, 4, 8],
+  "ref_opt_val": 42
+}
