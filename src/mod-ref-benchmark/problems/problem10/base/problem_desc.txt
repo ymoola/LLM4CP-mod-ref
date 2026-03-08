@@ -1,0 +1,7 @@
+In a hospital, patients are located in several different zones. Each patient requires a certain amount of care, represented by an acuity value.
+
+A set of nurses is available to care for these patients. Each patient must be assigned to exactly one nurse. A nurse may only care for patients located within a single zone.
+
+Each nurse must care for at least a minimum number of patients and at most a maximum number of patients. In addition, the total workload assigned to a nurse, defined as the sum of the acuity values of the patients they care for, cannot exceed a specified maximum.
+
+The goal is to distribute the workload as evenly as possible across nurses. This is achieved by minimizing the variation in workloads between nurses.
