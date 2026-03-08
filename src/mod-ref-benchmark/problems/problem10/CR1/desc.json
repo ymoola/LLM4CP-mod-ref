@@ -1,0 +1,40 @@
+{
+  "source": "modref",
+  "name": "Nurse Assignment - CR1",
+  "content": "Patients are grouped into patient types, and required workload now depends on both patient type and assigned nurse. The workload of a nurse is the sum of type-specific nurse workload values over assigned patients. The objective is modified to jointly minimize total workload and workload dispersion (standard deviation) across nurses.",
+  "value_info": [
+    "`n_nurses`: Integer number of nurses.",
+    "`min_patients_per_nurse`: Minimum number of patients per nurse.",
+    "`max_patients_per_nurse`: Maximum number of patients per nurse.",
+    "`max_workload_per_nurse`: Upper bound on workload per nurse.",
+    "`patient_type`: List[int], type index of each patient (0-based).",
+    "`patient_zone`: List[int], zone index of each patient.",
+    "`workload_by_type_nurse`: 2D List[int] where workload_by_type_nurse[t][k] is effort for nurse k to treat patient type t."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`patient_assignment`: List[int] of length n_patients, where patient_assignment[i] is the assigned nurse for patient i.",
+      "example": "[0, 1, 0, 2, 3, 4, 5, 3, 2, 1, 4, 5]",
+      "type": "List[int]",
+      "size": "[n_patients]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`workload`: List[int] of length n_nurses, workload per nurse under type-dependent effort values.",
+      "example": "[11, 10, 12, 11, 9, 10]",
+      "type": "List[int]",
+      "size": "[n_nurses]"
+    },
+    "var3": {
+      "descr": "`total_workload`: Integer sum of workloads across all nurses.",
+      "example": "63",
+      "type": "int"
+    },
+    "var4": {
+      "descr": "`variance_numerator`: Integer workload-dispersion score used to encourage balanced nurse workloads (lower is better).",
+      "example": "12",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}

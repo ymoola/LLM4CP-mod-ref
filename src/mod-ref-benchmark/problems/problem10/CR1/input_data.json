@@ -1,0 +1,16 @@
+{
+  "n_nurses": 6,
+  "min_patients_per_nurse": 1,
+  "max_patients_per_nurse": 3,
+  "max_workload_per_nurse": 25,
+
+  "patient_type": [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2],
+  "patient_zone": [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2],
+
+  "workload_by_type_nurse": [
+    [6, 4, 5, 7, 6, 5],
+    [5, 6, 4, 6, 5, 7],
+    [7, 5, 6, 4, 6, 5]
+  ],
+  "ref_opt_val":66
+}
