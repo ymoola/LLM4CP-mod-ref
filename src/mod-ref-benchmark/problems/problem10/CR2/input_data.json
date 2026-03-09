@@ -1,0 +1,16 @@
+{
+  "n_nurses": 4,
+  "min_patients_per_nurse": 2,
+  "max_patients_per_nurse": 2,
+  "max_workload_per_nurse": 17,
+
+  "patient_acuity": [9, 7, 5, 8, 6, 4, 3, 2],
+  "patient_zone": [0, 0, 0, 1, 1, 1, 2, 2],
+
+  "zone_distance": [
+    [0, 4, 6],
+    [4, 0, 3],
+    [6, 3, 0]
+  ],
+  "ref_opt_val":48
+}

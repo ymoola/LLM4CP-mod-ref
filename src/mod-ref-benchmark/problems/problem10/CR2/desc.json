@@ -1,0 +1,40 @@
+{
+  "source": "modref",
+  "name": "Nurse Assignment - CR2",
+  "content": "The one-zone-per-nurse restriction is relaxed: nurses may care for patients from multiple zones. A distance matrix between zones defines travel effort. The travel cost of a nurse is induced by patients from different zones assigned to that same nurse. The objective is updated to jointly minimize total workload and total travel cost.",
+  "value_info": [
+    "`n_nurses`: Integer number of nurses.",
+    "`min_patients_per_nurse`: Minimum number of patients per nurse.",
+    "`max_patients_per_nurse`: Maximum number of patients per nurse.",
+    "`max_workload_per_nurse`: Upper bound on workload per nurse.",
+    "`patient_acuity`: List[int], workload contribution of each patient.",
+    "`patient_zone`: List[int], zone index of each patient.",
+    "`zone_distance`: 2D List[int], where zone_distance[z1][z2] is travel distance between zones z1 and z2."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`patient_assignment`: List[int] of length n_patients, where patient_assignment[i] is the assigned nurse for patient i.",
+      "example": "[0, 1, 0, 2, 3, 4, 5, 3, 2, 1, 4, 5]",
+      "type": "List[int]",
+      "size": "[n_patients]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`workload`: List[int] of length n_nurses, workload per nurse from assigned patient acuities.",
+      "example": "[14, 16, 15, 15, 16, 14]",
+      "type": "List[int]",
+      "size": "[n_nurses]"
+    },
+    "var3": {
+      "descr": "`total_workload`: Integer sum of nurse workloads.",
+      "example": "90",
+      "type": "int"
+    },
+    "var4": {
+      "descr": "`total_travel_cost`: Integer travel-cost term based on inter-zone distances among patients assigned to the same nurse.",
+      "example": "14",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop"
+}
