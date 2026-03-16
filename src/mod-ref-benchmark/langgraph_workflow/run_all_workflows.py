@@ -50,6 +50,12 @@ def main():
         help="Optional max output tokens for OpenAI.",
     )
     parser.add_argument(
+        "--max-planner-validation-error-loops",
+        type=int,
+        default=5,
+        help="Maximum number of planner-validation retries before failing early.",
+    )
+    parser.add_argument(
         "--max-exec-error-loops",
         type=int,
         default=5,
@@ -113,6 +119,7 @@ def main():
                     problem_path=str(problem_dir),
                     cr=cr_dir.name,
                     llm_config=llm_config,
+                    max_planner_validation_error_loops=args.max_planner_validation_error_loops,
                     max_exec_error_loops=args.max_exec_error_loops,
                     max_validation_error_loops=args.max_validation_error_loops,
                     executor_timeout=args.executor_timeout,
@@ -123,6 +130,7 @@ def main():
                         "problem": problem_dir.name,
                         "cr": cr_dir.name,
                         "status": result.get("unit_test_result", {}).get("status", "fail"),
+                        "planner_validator_status": result.get("planner_validator_status"),
                         "validator_status": result.get("validator_status"),
                         "termination_reason": result.get("termination_reason"),
                         "loop_count": result.get("loop_count"),
@@ -151,6 +159,7 @@ def main():
     summary = {
         "timestamp": summary_timestamp,
         "llm_config": llm_config,
+        "max_planner_validation_error_loops": args.max_planner_validation_error_loops,
         "max_exec_error_loops": args.max_exec_error_loops,
         "max_validation_error_loops": args.max_validation_error_loops,
         "executor_timeout": args.executor_timeout,

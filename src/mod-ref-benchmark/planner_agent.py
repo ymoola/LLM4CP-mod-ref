@@ -106,11 +106,13 @@ def build_planner_prompt(
     numbered_model: str,
     parser_mapping: dict,
     schema: dict,
+    previous_plan: dict | None = None,
+    feedback: str | None = None,
 ) -> str:
     schema_text = json.dumps(schema, indent=2)
     cr_pretty = json.dumps(cr_desc, indent=2)
     mapping_text = json.dumps(parser_mapping, indent=2)
-    return f"""
+    prompt = f"""
 You are the Planner agent. Given a change request (CR) and the existing CPMPy model, produce a precise edit plan indicating what needs to change (add/modify constraints or objectives) and where.
 
 Output must follow this JSON schema (also enforced via structured output):
@@ -136,6 +138,18 @@ Parser mapping (NL to code):
 Numbered CPMPy reference model:
 {numbered_model}
 """
+    if previous_plan or feedback:
+        prompt += f"""
+
+Previous planner output:
+{json.dumps(previous_plan or {}, indent=2)}
+
+Planner validator feedback:
+{feedback or "(none)"}
+
+Revise the plan to address the feedback while keeping correct parts of the existing plan.
+"""
+    return prompt
 
 
 def run_planner_agent(
@@ -143,6 +157,8 @@ def run_planner_agent(
     cr_name: str,
     parser_json: str | None = None,
     parser_mapping: dict | None = None,
+    previous_plan: dict | None = None,
+    feedback: str | None = None,
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_path: str | None = None,
@@ -177,7 +193,15 @@ def run_planner_agent(
     parser_mapping = parser_mapping or load_parser_output(parser_json_path)
 
     schema = build_planner_schema()
-    prompt = build_planner_prompt(base_nl_description, cr_desc, numbered_model, parser_mapping, schema)
+    prompt = build_planner_prompt(
+        base_nl_description,
+        cr_desc,
+        numbered_model,
+        parser_mapping,
+        schema,
+        previous_plan=previous_plan,
+        feedback=feedback,
+    )
 
     if llm_config is None:
         cfg = LLMConfig(provider="ollama", model=model_name)

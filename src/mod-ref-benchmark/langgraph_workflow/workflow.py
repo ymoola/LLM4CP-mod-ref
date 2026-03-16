@@ -17,6 +17,7 @@ if str(AGENTS_DIR) not in sys.path:
 
 from parser_agent import run_parser_agent
 from planner_agent import run_planner_agent
+from planner_validator_agent import run_planner_validator_agent
 from modifier_agent import run_modifier_agent
 from executor_agent import run_executor_agent
 from validator_agent import run_validator_agent
@@ -42,6 +43,9 @@ class WorkflowState(TypedDict, total=False):
     parser_output: Dict[str, Any]
     planner_json: str
     planner_output: Dict[str, Any]
+    planner_validator_status: str
+    planner_validator_output: Dict[str, Any]
+    planner_feedback: str
     generated_model_path: str
     exec_ok: bool
     exec_error: str
@@ -50,8 +54,10 @@ class WorkflowState(TypedDict, total=False):
     validator_output: Dict[str, Any]
     error_message: str
     loop_count: int
+    planner_validation_error_count: int
     exec_error_count: int
     validation_error_count: int
+    max_planner_validation_error_loops: int
     max_exec_error_loops: int
     max_validation_error_loops: int
     unit_test_result: Dict[str, Any]
@@ -88,6 +94,12 @@ def _max_validation_error_loops(state: WorkflowState) -> int:
     return 5
 
 
+def _max_planner_validation_error_loops(state: WorkflowState) -> int:
+    if state.get("max_planner_validation_error_loops") is not None:
+        return int(state["max_planner_validation_error_loops"])
+    return 5
+
+
 def _is_unit_test_pass(verify_result: Any) -> bool:
     if verify_result == "pass":
         return True
@@ -113,10 +125,56 @@ def planner_node(state: WorkflowState) -> WorkflowState:
         cr_name=state["cr"],
         parser_json=state.get("parser_json"),
         parser_mapping=state.get("parser_output"),
+        previous_plan=state.get("planner_output"),
+        feedback=state.get("planner_feedback"),
         llm_config=state.get("llm_config"),
         output_path=False,
     )
-    return {"planner_json": str(planner_path) if planner_path else None, "planner_output": planner_output}
+    return {
+        "planner_json": str(planner_path) if planner_path else None,
+        "planner_output": planner_output,
+        "planner_validator_status": None,
+        "planner_validator_output": None,
+        "planner_feedback": None,
+    }
+
+
+def planner_validator_node(state: WorkflowState) -> WorkflowState:
+    print(f"[workflow] Stage: planner_validator | cr={state.get('cr')}")
+    validator_output, _ = run_planner_validator_agent(
+        problem_path=state["problem_path"],
+        cr_name=state["cr"],
+        planner_output=state.get("planner_output") or {},
+        parser_mapping=state.get("parser_output") or {},
+        llm_config=state.get("llm_config"),
+        output_path=False,
+    )
+    status = validator_output.get("status", "needs_changes")
+    feedback = None
+    planner_validation_error_count = int(state.get("planner_validation_error_count", 0) or 0)
+    if status != "pass":
+        planner_validation_error_count += 1
+        issues = validator_output.get("issues", [])
+        print("[workflow] Planner validator returned needs_changes. Issues:")
+        print(json.dumps(issues, indent=2))
+        if issues:
+            parts = []
+            for issue in issues:
+                title = issue.get("title", "")
+                desc = issue.get("description", "")
+                suggestion = issue.get("suggestion", "")
+                parts.append(f"{title}: {desc} | Suggestion: {suggestion}")
+            feedback = "; ".join(parts)
+        else:
+            feedback = validator_output.get("notes_for_planner") or validator_output.get(
+                "summary", "Planner validator requested changes."
+            )
+    return {
+        "planner_validator_status": status,
+        "planner_validator_output": validator_output,
+        "planner_feedback": feedback,
+        "planner_validation_error_count": planner_validation_error_count,
+    }
 
 
 def modifier_node(state: WorkflowState) -> WorkflowState:
@@ -279,16 +337,29 @@ def route_after_validator(state: WorkflowState) -> str:
     return "modifier"
 
 
+def route_after_planner_validator(state: WorkflowState) -> str:
+    if state.get("planner_validator_status") == "pass":
+        return "modifier"
+    if int(state.get("planner_validation_error_count", 0) or 0) >= _max_planner_validation_error_loops(state):
+        return "finalize"
+    return "planner"
+
+
 def finalize_node(state: WorkflowState) -> WorkflowState:
     """Ensure final state explains why we stopped."""
     exec_ok = state.get("exec_ok")
+    planner_validator_status = state.get("planner_validator_status")
     validator_status = state.get("validator_status")
+    planner_validation_error_count = int(state.get("planner_validation_error_count", 0) or 0)
     exec_error_count = int(state.get("exec_error_count", 0) or 0)
     validation_error_count = int(state.get("validation_error_count", 0) or 0)
+    max_planner_validation_error_loops = _max_planner_validation_error_loops(state)
     max_exec_error_loops = _max_exec_error_loops(state)
     max_validation_error_loops = _max_validation_error_loops(state)
 
-    if exec_ok is False and exec_error_count >= max_exec_error_loops:
+    if planner_validator_status and planner_validator_status != "pass" and planner_validation_error_count >= max_planner_validation_error_loops:
+        reason = "max_planner_validation_error_loops_reached"
+    elif exec_ok is False and exec_error_count >= max_exec_error_loops:
         reason = "max_exec_error_loops_reached"
     elif validator_status and validator_status != "pass" and validation_error_count >= max_validation_error_loops:
         reason = "max_validation_error_loops_reached"
@@ -319,6 +390,7 @@ def build_graph() -> StateGraph:
     graph = StateGraph(WorkflowState)
     graph.add_node("parser", parser_node)
     graph.add_node("planner", planner_node)
+    graph.add_node("planner_validator", planner_validator_node)
     graph.add_node("modifier", modifier_node)
     graph.add_node("executor", executor_node)
     graph.add_node("validator", validator_node)
@@ -327,7 +399,12 @@ def build_graph() -> StateGraph:
 
     graph.add_edge(START, "parser")
     graph.add_edge("parser", "planner")
-    graph.add_edge("planner", "modifier")
+    graph.add_edge("planner", "planner_validator")
+    graph.add_conditional_edges(
+        "planner_validator",
+        route_after_planner_validator,
+        {"planner": "planner", "modifier": "modifier", "finalize": "finalize"},
+    )
     graph.add_edge("modifier", "executor")
     graph.add_conditional_edges(
         "executor",
@@ -366,6 +443,7 @@ def run_workflow_once(
     problem_path: str,
     cr: str,
     llm_config: Dict[str, Any],
+    max_planner_validation_error_loops: int = 5,
     max_exec_error_loops: int = 5,
     max_validation_error_loops: int = 5,
     executor_timeout: int = 30,
@@ -390,8 +468,10 @@ def run_workflow_once(
         "problem_path": problem_path,
         "cr": cr,
         "loop_count": 0,
+        "planner_validation_error_count": 0,
         "exec_error_count": 0,
         "validation_error_count": 0,
+        "max_planner_validation_error_loops": max_planner_validation_error_loops,
         "max_exec_error_loops": max_exec_error_loops,
         "max_validation_error_loops": max_validation_error_loops,
         "llm_config": llm_config,
@@ -405,15 +485,19 @@ def run_workflow_once(
         "problem": result.get("problem"),
         "cr": result.get("cr"),
         "llm_config": llm_config,
+        "max_planner_validation_error_loops": max_planner_validation_error_loops,
         "max_exec_error_loops": max_exec_error_loops,
         "max_validation_error_loops": max_validation_error_loops,
         "executor_timeout": timeout_value,
         "loop_count": result.get("loop_count"),
+        "planner_validation_error_count": result.get("planner_validation_error_count"),
         "exec_error_count": result.get("exec_error_count"),
         "validation_error_count": result.get("validation_error_count"),
         "termination_reason": result.get("termination_reason"),
         "parser_output": result.get("parser_output"),
         "planner_output": result.get("planner_output"),
+        "planner_validator_output": result.get("planner_validator_output"),
+        "planner_validator_status": result.get("planner_validator_status"),
         "executor_output": result.get("executor_output"),
         "exec_error": result.get("exec_error"),
         "validator_output": result.get("validator_output"),
@@ -455,6 +539,12 @@ def main():
         help="Optional max output tokens for OpenAI Responses API (ignored by ollama).",
     )
     parser.add_argument(
+        "--max-planner-validation-error-loops",
+        type=int,
+        default=5,
+        help="Maximum number of planner-validation retries before failing early.",
+    )
+    parser.add_argument(
         "--max-exec-error-loops",
         type=int,
         default=5,
@@ -486,6 +576,7 @@ def main():
         problem_path=args.problem_path,
         cr=args.cr,
         llm_config=llm_config,
+        max_planner_validation_error_loops=args.max_planner_validation_error_loops,
         max_exec_error_loops=args.max_exec_error_loops,
         max_validation_error_loops=args.max_validation_error_loops,
         executor_timeout=args.executor_timeout,
