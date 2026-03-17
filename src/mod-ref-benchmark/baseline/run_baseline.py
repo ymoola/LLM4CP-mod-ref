@@ -23,6 +23,8 @@ from llm_client import (
     DEFAULT_OPENAI_MODEL,
     DEFAULT_OPENAI_REASONING_EFFORT,
 )  
+from llm_prompts import build_single_shot_prompt, extract_output_keys
+from llm_schemas import build_code_schema
 
 
 DEFAULT_MODEL = DEFAULT_OPENAI_MODEL
@@ -39,101 +41,6 @@ def load_verify_func(unit_test_path: Path):
     if not verify_funcs:
         raise ValueError(f"No *_verify_func found in {unit_test_path}")
     return verify_funcs[0]
-
-
-def extract_output_keys(ref_sol_format: dict) -> list[str]:
-    """
-    ref_sol_format uses placeholder keys like 'var1'. The real output keys are
-    embedded as backtick-quoted identifiers in each entry's 'descr' field.
-    """
-    import re
-
-    keys: list[str] = []
-    for _, spec in (ref_sol_format or {}).items():
-        descr = (spec or {}).get("descr", "") or ""
-        m = re.search(r"`([^`]+)`", descr)
-        if not m:
-            continue
-        name = m.group(1).strip()
-        if name.endswith(":"):
-            name = name[:-1].strip()
-        if name and name not in keys:
-            keys.append(name)
-    return keys
-
-
-def build_single_shot_prompt(
-    *,
-    base_nl_description: str,
-    base_reference_code: str,
-    cr_desc: dict[str, Any],
-    expected_output_keys: list[str],
-) -> str:
-    cr_text = cr_desc.get("content", "")
-    value_info = cr_desc.get("value_info", [])
-    ref_sol_format = cr_desc.get("ref_sol_format", {})
-    prob_type = cr_desc.get("prob_type", "")
-
-    return f"""
-You are a CPMPy modeling assistant.
-
-Task: Modify/extend the given *base* CPMPy reference model to implement the Change Request (CR), and output a COMPLETE, EXECUTABLE Python script.
-
-This is a single-shot generation: you must do everything in one pass.
-
-Inputs you can rely on at runtime:
-- A file named input_data.json in the same directory as the generated script.
-
-Requirements (very important):
-- Use CPMPy (cpmpy) and json for I/O. Only use other standard libs if truly necessary.
-- Load ALL numeric parameters ONLY from input_data.json. Do NOT hard-code instance data.
-- Implement the CR precisely while preserving unrelated base constraints.
-- The script must be self-contained: do NOT import local project files (e.g., reference_model.py). Copy/adapt any needed code directly.
-- Solve the model (satisfaction or optimization as appropriate).
-- Print EXACTLY ONE JSON object to stdout using print(json.dumps(...)).
-
-CRITICAL INSTRUCTION ABOUT OUTPUT KEYS:
-- In ref_sol_format, keys like "var1", "var2", ... are placeholders.
-- The REAL output keys are the backtick-quoted identifiers inside each ref_sol_format[*].descr.
-- For this CR, you MUST output a JSON dict with the following top-level keys:
-  {expected_output_keys}
-
-Return format:
-- Output ONLY the Python code (no markdown, no backticks, no surrounding text).
-
-Base problem description (NL):
-{base_nl_description}
-
-Change Request:
-{cr_text}
-
-Parameter description (value_info):
-{json.dumps(value_info, indent=2)}
-
-Expected output format (ref_sol_format) [placeholders like var1 are NOT real keys]:
-{json.dumps(ref_sol_format, indent=2)}
-
-Problem type hint (prob_type):
-{prob_type}
-
-Base CPMPy reference model code:
-{base_reference_code}
-"""
-
-
-def build_code_schema() -> dict[str, Any]:
-    """Structured output schema for returning Python code from the LLM."""
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "python_code": {
-                "type": "string",
-                "description": "A complete Python script (CPMPy) that reads input_data.json, solves the CR, and prints JSON.",
-            }
-        },
-        "required": ["python_code"],
-    }
 
 
 def run_python_script(*, script_path: Path, cwd: Path, timeout: int | None = None) -> tuple[dict[str, Any] | None, str, str, int]:

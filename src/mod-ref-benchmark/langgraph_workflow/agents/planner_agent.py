@@ -10,14 +10,11 @@ if str(MODREF_DIR) not in sys.path:
     sys.path.insert(0, str(MODREF_DIR))
 
 from llm_client import LLMClient, LLMConfig, DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
+from llm_prompts import build_planner_prompt, number_code_lines
+from llm_schemas import build_planner_schema
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
-
-
-def _number_code_lines(code: str) -> str:
-    """Return code with 1-based line numbers for LLM referencing."""
-    return "\n".join(f"{idx + 1:04d}: {line}" for idx, line in enumerate(code.splitlines()))
 
 
 def load_parser_output(parser_json_path: Path) -> dict:
@@ -26,136 +23,6 @@ def load_parser_output(parser_json_path: Path) -> dict:
     return data.get("parser_output", data)
 
 
-def build_planner_schema() -> dict:
-    """Schema for structured planner output."""
-    line_range_schema = {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "start": {"type": "integer"},
-            "end": {"type": "integer"},
-        },
-        "required": ["start", "end"],
-    }
-
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "plan": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "change_type": {
-                            "type": "string",
-                            "enum": [
-                                "add_constraint",
-                                "modify_constraint",
-                                "remove_constraint",
-                                "add_objective",
-                                "modify_objective",
-                                "data_handling",
-                                "other",
-                            ],
-                        },
-                        "title": {"type": "string"},
-                        "description": {"type": "string"},
-                        "related_nl": {"type": "string"},
-                        "target_lines": {
-                            "anyOf": [line_range_schema, {"type": "null"}],
-                        },
-                        "insert_after_line": {"type": ["integer", "null"]},
-                        "code_excerpt": {"type": "string"},
-                        "strategy": {"type": "string"},
-                        "confidence": {"type": ["number", "null"]},
-                        "risks": {"type": "string"},
-                    },
-                    "required": [
-                        "change_type",
-                        "title",
-                        "description",
-                        "related_nl",
-                        "target_lines",
-                        "insert_after_line",
-                        "code_excerpt",
-                        "strategy",
-                        "confidence",
-                        "risks",
-                    ],
-                },
-            },
-            "preserve_sections": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "model_lines": {
-                            **line_range_schema,
-                        },
-                        "reason": {"type": "string"},
-                    },
-                    "required": ["model_lines", "reason"],
-                },
-            },
-            "notes_for_modifier": {"type": "string"},
-        },
-        "required": ["plan", "preserve_sections", "notes_for_modifier"],
-    }
-
-
-def build_planner_prompt(
-    base_nl_description: str,
-    cr_desc: dict,
-    numbered_model: str,
-    parser_mapping: dict,
-    schema: dict,
-    previous_plan: dict | None = None,
-    feedback: str | None = None,
-) -> str:
-    schema_text = json.dumps(schema, indent=2)
-    cr_pretty = json.dumps(cr_desc, indent=2)
-    mapping_text = json.dumps(parser_mapping, indent=2)
-    prompt = f"""
-You are the Planner agent. Given a change request (CR) and the existing CPMPy model, produce a precise edit plan indicating what needs to change (add/modify constraints or objectives) and where.
-
-Output must follow this JSON schema (also enforced via structured output):
-{schema_text}
-
-Guidelines:
-- Use 1-based line numbers from the numbered model listing.
-- Prefer pointing to existing constraints to modify; if adding, suggest nearby line to insert (insert_after_line).
-- Keep strategy concise but actionable for the Modifier agent (no full code, just how to implement).
-- Do NOT propose changes unrelated to the CR; highlight sections to preserve so the modifier avoids regressions.
-- If confidence is low, note risks.
-- If you cannot confidently point to a location, set target_lines to null and/or insert_after_line to null (do not guess line numbers).
-
-Change Request (CR) JSON:
-{cr_pretty}
-
-Base problem description (NL):
-{base_nl_description}
-
-Parser mapping (NL to code):
-{mapping_text}
-
-Numbered CPMPy reference model:
-{numbered_model}
-"""
-    if previous_plan or feedback:
-        prompt += f"""
-
-Previous planner output:
-{json.dumps(previous_plan or {}, indent=2)}
-
-Planner validator feedback:
-{feedback or "(none)"}
-
-Revise the plan to address the feedback while keeping correct parts of the existing plan.
-"""
-    return prompt
 
 
 def run_planner_agent(
@@ -193,7 +60,7 @@ def run_planner_agent(
 
     base_nl_description = desc_path.read_text()
     base_model_code = model_path.read_text()
-    numbered_model = _number_code_lines(base_model_code)
+    numbered_model = number_code_lines(base_model_code)
 
     cr_desc = json.loads(cr_desc_path.read_text())
     parser_mapping = parser_mapping or load_parser_output(parser_json_path)

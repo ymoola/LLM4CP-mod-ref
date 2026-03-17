@@ -10,116 +10,11 @@ if str(MODREF_DIR) not in sys.path:
     sys.path.insert(0, str(MODREF_DIR))
 
 from llm_client import LLMClient, LLMConfig, DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
+from llm_prompts import build_planner_validator_prompt, number_code_lines
+from llm_schemas import build_planner_validator_schema
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
-
-
-def _number_code_lines(code: str) -> str:
-    """Return code with 1-based line numbers for LLM referencing."""
-    return "\n".join(f"{idx + 1:04d}: {line}" for idx, line in enumerate(code.splitlines()))
-
-
-def build_planner_validator_schema() -> dict:
-    line_range_schema = {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "start": {"type": "integer"},
-            "end": {"type": "integer"},
-        },
-        "required": ["start", "end"],
-    }
-
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "status": {"type": "string", "enum": ["pass", "needs_changes"]},
-            "summary": {"type": "string"},
-            "issues": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "title": {"type": "string"},
-                        "description": {"type": "string"},
-                        "category": {
-                            "type": "string",
-                            "enum": [
-                                "missing_change",
-                                "incorrect_target",
-                                "unnecessary_change",
-                                "preservation_risk",
-                                "line_reference",
-                                "other",
-                            ],
-                        },
-                        "severity": {"type": "string", "enum": ["high", "medium", "low"]},
-                        "target_lines": {"anyOf": [line_range_schema, {"type": "null"}]},
-                        "suggestion": {"type": "string"},
-                        "confidence": {"type": ["number", "null"]},
-                    },
-                    "required": [
-                        "title",
-                        "description",
-                        "category",
-                        "severity",
-                        "target_lines",
-                        "suggestion",
-                        "confidence",
-                    ],
-                },
-            },
-            "notes_for_planner": {"type": "string"},
-        },
-        "required": ["status", "summary", "issues", "notes_for_planner"],
-    }
-
-
-def build_planner_validator_prompt(
-    base_nl_description: str,
-    cr_desc: dict,
-    parser_mapping: dict,
-    planner_output: dict,
-    numbered_model: str,
-    schema: dict,
-) -> str:
-    return f"""
-You are the Planner Validator agent. Review the planner output before any code is generated.
-
-Your job:
-- Check whether the plan fully covers the Change Request.
-- Check whether the line targets are plausible given the parser mapping and reference model.
-- Check whether the plan protects unaffected sections instead of proposing unnecessary changes.
-- Do NOT write code and do NOT run code.
-
-Output must follow this JSON schema:
-{json.dumps(schema, indent=2)}
-
-Guidelines:
-- Return status "pass" only if the plan is specific, aligned with the CR, and safe for the modifier to execute.
-- Return status "needs_changes" if the plan is missing a required edit, targets the wrong code, proposes unnecessary edits, or leaves preservation risks.
-- Keep feedback concise and directly actionable for the Planner agent.
-- Use 1-based line numbers when pointing to issues in the reference model.
-- If an issue cannot be localized to exact lines, set target_lines to null.
-
-Base problem description:
-{base_nl_description}
-
-Change Request JSON:
-{json.dumps(cr_desc, indent=2)}
-
-Parser mapping:
-{json.dumps(parser_mapping, indent=2)}
-
-Planner output to review:
-{json.dumps(planner_output, indent=2)}
-
-Reference model with line numbers:
-{numbered_model}
-"""
 
 
 def run_planner_validator_agent(
@@ -147,7 +42,7 @@ def run_planner_validator_agent(
 
     base_nl_description = desc_path.read_text()
     base_model_code = model_path.read_text()
-    numbered_model = _number_code_lines(base_model_code)
+    numbered_model = number_code_lines(base_model_code)
     cr_desc = json.loads(cr_desc_path.read_text())
 
     schema = build_planner_validator_schema()

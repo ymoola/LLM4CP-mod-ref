@@ -10,105 +10,11 @@ if str(MODREF_DIR) not in sys.path:
     sys.path.insert(0, str(MODREF_DIR))
 
 from llm_client import LLMClient, LLMConfig, DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
+from llm_prompts import build_parser_prompt, number_code_lines
+from llm_schemas import build_parser_schema
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
-
-
-def _number_code_lines(code: str) -> str:
-    """Return code with 1-based line numbers for LLM referencing."""
-    return "\n".join(f"{idx + 1:04d}: {line}" for idx, line in enumerate(code.splitlines()))
-
-
-def build_parser_schema() -> dict:
-    """Build the JSON schema used for structured output."""
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "mappings": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "nl_snippet": {"type": "string"},
-                        "model_lines": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {
-                                "start": {"type": "integer"},
-                                "end": {"type": "integer"},
-                            },
-                            "required": ["start", "end"],
-                        },
-                        "code_excerpt": {"type": "string"},
-                        "variables": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                        "reasoning": {"type": "string"},
-                        "confidence": {"type": "number"},
-                    },
-                    "required": ["nl_snippet", "model_lines", "code_excerpt", "variables", "reasoning", "confidence"],
-                },
-            },
-            "unmapped_nl": {
-                "type": "array",
-                "items": {"type": "string"},
-            },
-            "unmapped_model_segments": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "properties": {
-                        "model_lines": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {
-                                "start": {"type": "integer"},
-                                "end": {"type": "integer"},
-                            },
-                            "required": ["start", "end"],
-                        },
-                        "code_excerpt": {"type": "string"},
-                        "reasoning": {"type": "string"},
-                    },
-                    "required": ["model_lines", "code_excerpt", "reasoning"],
-                },
-            },
-        },
-        "required": ["mappings", "unmapped_nl", "unmapped_model_segments"],
-    }
-
-
-def build_parser_prompt(
-    base_nl_description: str,
-    numbered_model: str,
-    schema: dict,
-) -> str:
-    schema_text = json.dumps(schema, indent=2)
-    return f"""
-You are the Parser agent for constraint-programming models. Your goal is to align a natural language problem description with an existing CPMPy model by pinpointing which sections of code implement each NL statement.
-
-Produce a JSON object following this schema (also passed as the structured format):
-{schema_text}
-
-Guidelines:
-- Use 1-based line numbers from the numbered model listing below.
-- Keep code excerpts short (just the lines that implement the NL statement).
-- Add brief reasoning and set lower confidence when unsure; never invent code or lines that are not present.
-- If a NL requirement is not represented in the code, put it in 'unmapped_nl'.
-- If code appears without a NL rationale, add it to 'unmapped_model_segments'.
-- Always include the keys 'mappings', 'unmapped_nl', and 'unmapped_model_segments' (use empty arrays if none).
-
-Base NL description:
-{base_nl_description}
-
-CPMPy model with line numbers:
-{numbered_model}
-"""
 
 
 def run_parser_agent(
@@ -133,7 +39,7 @@ def run_parser_agent(
 
     base_nl_description = desc_path.read_text()
     base_model_code = model_path.read_text()
-    numbered_model = _number_code_lines(base_model_code)
+    numbered_model = number_code_lines(base_model_code)
 
     schema = build_parser_schema()
     prompt = build_parser_prompt(base_nl_description, numbered_model, schema)
