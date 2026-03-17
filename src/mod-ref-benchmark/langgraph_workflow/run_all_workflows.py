@@ -13,6 +13,7 @@ MODREF_DIR = THIS_DIR.parent  # src/mod-ref-benchmark
 if str(MODREF_DIR) not in sys.path:
     sys.path.insert(0, str(MODREF_DIR))
 
+from llm_client import DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT  # noqa: E402
 from workflow import build_llm_config, run_workflow_once  # noqa: E402
 
 
@@ -36,13 +37,14 @@ def main():
     )
     parser.add_argument(
         "--model-name",
-        default="gpt-oss:20b",
-        help="Model name (OpenAI default alias maps to gpt-5-mini-2025-08-07).",
+        default=DEFAULT_OPENAI_MODEL,
+        help=f"Model name (default: {DEFAULT_OPENAI_MODEL}).",
     )
     parser.add_argument(
         "--reasoning-effort",
         choices=["low", "medium", "high"],
-        help="Optional OpenAI reasoning effort.",
+        default=DEFAULT_OPENAI_REASONING_EFFORT,
+        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}).",
     )
     parser.add_argument(
         "--max-output-tokens",

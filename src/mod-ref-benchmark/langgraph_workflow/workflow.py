@@ -15,6 +15,7 @@ AGENTS_DIR = THIS_DIR.parent  # src/mod-ref-benchmark
 if str(AGENTS_DIR) not in sys.path:
     sys.path.insert(0, str(AGENTS_DIR))
 
+from llm_client import DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
 from parser_agent import run_parser_agent
 from planner_agent import run_planner_agent
 from planner_validator_agent import run_planner_validator_agent
@@ -185,17 +186,12 @@ def modifier_node(state: WorkflowState) -> WorkflowState:
 
     loop_count = state.get("loop_count", 0) + 1
 
-    # Use a coding-optimized model only for the modifier step when using OpenAI.
-    modifier_llm_config = dict(state.get("llm_config") or {})
-    if modifier_llm_config.get("provider") == "openai":
-        modifier_llm_config["model"] = "gpt-5.1-codex-max"
-
     code, output_path, _ = run_modifier_agent(
         problem_path=state["problem_path"],
         cr_name=state["cr"],
         planner_json=state.get("planner_json"),
         planner_plan=state.get("planner_output"),
-        llm_config=modifier_llm_config or state.get("llm_config"),
+        llm_config=state.get("llm_config"),
         previous_code=prev_code,
         error_message=state.get("error_message"),
     )
@@ -429,7 +425,9 @@ def build_llm_config(
     max_output_tokens: int | None = None,
 ) -> Dict[str, Any]:
     if provider == "openai" and model_name == "gpt-oss:20b":
-        model_name = "gpt-5-mini-2025-08-07"
+        model_name = DEFAULT_OPENAI_MODEL
+    if provider == "openai" and reasoning_effort is None:
+        reasoning_effort = DEFAULT_OPENAI_REASONING_EFFORT
     return {
         "provider": provider,
         "model": model_name,
@@ -525,13 +523,14 @@ def main():
     )
     parser.add_argument(
         "--model-name",
-        default="gpt-oss:20b",
-        help="Model name to use for all LLM calls (default: gpt-oss:20b).",
+        default=DEFAULT_OPENAI_MODEL,
+        help=f"Model name to use for all LLM calls (default: {DEFAULT_OPENAI_MODEL}).",
     )
     parser.add_argument(
         "--reasoning-effort",
         choices=["low", "medium", "high"],
-        help="Optional OpenAI reasoning effort (ignored by ollama).",
+        default=DEFAULT_OPENAI_REASONING_EFFORT,
+        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}; ignored by ollama).",
     )
     parser.add_argument(
         "--max-output-tokens",

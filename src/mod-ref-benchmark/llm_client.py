@@ -7,6 +7,9 @@ from typing import Any, Literal, Optional
 
 
 LLMProvider = Literal["ollama", "openai"]
+DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
+DEFAULT_OPENAI_MODEL = "gpt-5.4"
+DEFAULT_OPENAI_REASONING_EFFORT: Literal["high"] = "high"
 
 
 @dataclass(frozen=True)
@@ -19,10 +22,20 @@ class LLMConfig:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "LLMConfig":
+        provider = data["provider"]
+        model = data.get("model")
+        reasoning_effort = data.get("reasoning_effort")
+
+        if provider == "openai":
+            model = model or DEFAULT_OPENAI_MODEL
+            reasoning_effort = reasoning_effort or DEFAULT_OPENAI_REASONING_EFFORT
+        else:
+            model = model or DEFAULT_OLLAMA_MODEL
+
         return cls(
-            provider=data["provider"],
-            model=data["model"],
-            reasoning_effort=data.get("reasoning_effort"),
+            provider=provider,
+            model=model,
+            reasoning_effort=reasoning_effort,
             max_output_tokens=data.get("max_output_tokens"),
             base_url=data.get("base_url"),
         )

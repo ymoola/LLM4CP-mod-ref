@@ -17,10 +17,15 @@ MODREF_DIR = THIS_DIR.parent  # src/mod-ref-benchmark
 if str(MODREF_DIR) not in sys.path:
     sys.path.insert(0, str(MODREF_DIR))
 
-from llm_client import LLMClient, LLMConfig  
+from llm_client import (
+    LLMClient,
+    LLMConfig,
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENAI_REASONING_EFFORT,
+)  
 
 
-DEFAULT_MODEL = "gpt-5.1-codex-max"
+DEFAULT_MODEL = DEFAULT_OPENAI_MODEL
 
 
 def load_verify_func(unit_test_path: Path):
@@ -361,7 +366,7 @@ def run_single_case(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Single-shot baseline runner (OpenAI gpt-5.1-codex-max).")
+    parser = argparse.ArgumentParser(description=f"Single-shot baseline runner (OpenAI {DEFAULT_MODEL}).")
     parser.add_argument(
         "--problems-root",
         default=str((MODREF_DIR / "problems").resolve()),
@@ -380,7 +385,8 @@ def main():
     parser.add_argument(
         "--reasoning-effort",
         choices=["low", "medium", "high"],
-        help="Optional OpenAI reasoning effort.",
+        default=DEFAULT_OPENAI_REASONING_EFFORT,
+        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}).",
     )
     parser.add_argument(
         "--max-output-tokens",

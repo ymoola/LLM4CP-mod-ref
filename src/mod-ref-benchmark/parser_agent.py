@@ -3,7 +3,7 @@ import datetime
 import json
 from pathlib import Path
 
-from llm_client import LLMClient, LLMConfig
+from llm_client import LLMClient, LLMConfig, DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
 
 
 DEFAULT_MODEL = "gpt-oss:20b"
@@ -207,11 +207,12 @@ def main():
     # Convenience default when switching providers without specifying a model.
     model_name = args.model_name
     if args.provider == "openai" and model_name == DEFAULT_MODEL:
-        model_name = "gpt-4o-mini"
+        model_name = DEFAULT_OPENAI_MODEL
 
     llm_config = {
         "provider": args.provider,
         "model": model_name,
+        "reasoning_effort": DEFAULT_OPENAI_REASONING_EFFORT if args.provider == "openai" else None,
     }
     parsed_output, output_file = run_parser_agent(
         problem_path=args.problem,
