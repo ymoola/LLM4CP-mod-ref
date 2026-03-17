@@ -2,6 +2,12 @@ import argparse
 import datetime
 import json
 from pathlib import Path
+import sys
+
+THIS_DIR = Path(__file__).resolve().parent
+MODREF_DIR = THIS_DIR.parent.parent
+if str(MODREF_DIR) not in sys.path:
+    sys.path.insert(0, str(MODREF_DIR))
 
 from llm_client import LLMClient, LLMConfig, DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
 

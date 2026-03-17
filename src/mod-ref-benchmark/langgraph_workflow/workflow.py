@@ -14,14 +14,16 @@ THIS_DIR = Path(__file__).resolve().parent
 AGENTS_DIR = THIS_DIR.parent  # src/mod-ref-benchmark
 if str(AGENTS_DIR) not in sys.path:
     sys.path.insert(0, str(AGENTS_DIR))
+if str(THIS_DIR) not in sys.path:
+    sys.path.insert(0, str(THIS_DIR))
 
 from llm_client import DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
-from parser_agent import run_parser_agent
-from planner_agent import run_planner_agent
-from planner_validator_agent import run_planner_validator_agent
-from modifier_agent import run_modifier_agent
-from executor_agent import run_executor_agent
-from validator_agent import run_validator_agent
+from agents.parser_agent import run_parser_agent
+from agents.planner_agent import run_planner_agent
+from agents.planner_validator_agent import run_planner_validator_agent
+from agents.modifier_agent import run_modifier_agent
+from agents.executor_agent import run_executor_agent
+from agents.validator_agent import run_validator_agent
 
 
 def load_verify_func(unit_test_path: Path):
