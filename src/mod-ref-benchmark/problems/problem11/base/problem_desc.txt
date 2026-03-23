@@ -1,0 +1,7 @@
+A rotating work roster must be created for a group of employees over several weeks. Each day, every employee is assigned either a rest day or one of three shift types: early, late, or night.
+
+The schedule is built as a rotating pattern. A roster is created for one employee across all weeks, and the rosters of the other employees are obtained by shifting this pattern by different numbers of weeks. The schedule must also be cyclic, so that the final day is followed directly by the first day in a continuous repeating pattern.
+
+The roster must satisfy several rules. For each day of the week, the required number of employees for each shift type must be met. Saturday and Sunday of the same week must always have the same shift. Each shift must appear in runs that are neither too short nor too long. The order of shifts must follow a forward rotation pattern, meaning that a shift can only be followed by the same shift, a later shift, or a rest day. In addition, every employee must receive at least two rest days in every two-week period.
+
+The goal is to determine whether such a rotating roster exists.
