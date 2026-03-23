@@ -27,5 +27,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Introduces a new bottleneck variable and redefines the optimization target around maximum template load instead of total production.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "add",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 16,
+      "constraint_count": 9
+    },
+    "cr_impact": {
+      "affected_decision_variables": 3,
+      "affected_constraints": 2,
+      "notes": "Variable families: production and max_load. Constraint groups: maximum_template_load_tracking. Objective change: modify."
+    }
+  }
 }

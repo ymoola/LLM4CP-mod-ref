@@ -21,5 +21,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "Leaves feasibility intact but changes the optimization from uniform shift count to a weighted cost objective spanning every shift variable.",
+    "change_types": {
+      "constraints": "none",
+      "decision_variables": "none",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 77,
+      "constraint_count": 24
+    },
+    "cr_impact": {
+      "affected_decision_variables": 77,
+      "affected_constraints": 0,
+      "notes": "Variable families: x. Constraint groups: none. Objective change: modify."
+    }
+  }
 }

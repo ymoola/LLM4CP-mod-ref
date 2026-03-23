@@ -20,5 +20,23 @@
       "type": "List[List[int]]"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "Adds a time-indexed table-usage restriction that depends on both current state and goal state, so the change is broader than a local bound but does not redesign the model.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 142,
+      "constraint_count": 283
+    },
+    "cr_impact": {
+      "affected_decision_variables": 112,
+      "affected_constraints": 15,
+      "notes": "Variable families: state and done. Constraint groups: temporary_table_block_limit."
+    }
+  }
 }

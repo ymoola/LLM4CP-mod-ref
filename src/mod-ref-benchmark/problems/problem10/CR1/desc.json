@@ -36,5 +36,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Changes workload semantics to depend on both patient type and nurse, adds aggregate dispersion variables, and redefines the optimization around total workload plus workload balance.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 18,
+      "constraint_count": 72
+    },
+    "cr_impact": {
+      "affected_decision_variables": 20,
+      "affected_constraints": 8,
+      "notes": "Variable families: p, w, total_workload, and variance_numerator. Constraint groups: type_dependent_workload_definition, total_workload_aggregation, and workload_dispersion_aggregation. Objective change: modify."
+    }
+  }
 }

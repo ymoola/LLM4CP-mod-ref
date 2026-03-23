@@ -14,5 +14,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "csp"
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds two simple ordering inequalities on the existing denominator expressions without changing the rest of the puzzle structure.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 9,
+      "constraint_count": 2
+    },
+    "cr_impact": {
+      "affected_decision_variables": 9,
+      "affected_constraints": 2,
+      "notes": "Variable families: digits. Constraint groups: strict_denominator_ordering."
+    }
+  }
 }

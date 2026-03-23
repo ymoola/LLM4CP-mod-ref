@@ -1,18 +1,36 @@
 {
-    "source": "modref",
-    "name": "Car Sequencing – CR1",
-    "content": "Add a new constraint to limit consecutive identical car types: no more than two cars of the same type may appear consecutively in the production sequence.",
-    "value_info": [
-      "`at_most`: A list of integers specifying, for each option, the maximum number of cars that can require that option within any window of size `per_slots[o]`.\n`per_slots`: A list of integers defining the window size for each option, used to check capacity constraints.\n`demand`: A list of integers representing the number of cars required for each car type.\n`requires`: A 2D binary list of shape `[n_types × n_options]`, where `requires[t][o] = 1` indicates that car type `t` requires option `o`."
-    ],
-    "ref_sol_format": {
-      "var1": {
-        "descr": "`sequence`: A list of integers representing the order of car types in the assembly sequence. Each value corresponds to the type index of the car produced at that position.",
-        "example": "[0, 1, 2, 1, 0, 2]",
-        "type": "List[int]",
-        "size": "[sum(demand)]",
-        "index": "0-based"
-      }
+  "source": "modref",
+  "name": "Car Sequencing - CR1",
+  "content": "Add a new constraint to limit consecutive identical car types: no more than two cars of the same type may appear consecutively in the production sequence.",
+  "value_info": [
+    "`at_most`: A list of integers specifying, for each option, the maximum number of cars that can require that option within any window of size `per_slots[o]`.\n`per_slots`: A list of integers defining the window size for each option, used to check capacity constraints.\n`demand`: A list of integers representing the number of cars required for each car type.\n`requires`: A 2D binary list of shape `[n_types × n_options]`, where `requires[t][o] = 1` indicates that car type `t` requires option `o`."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`sequence`: A list of integers representing the order of car types in the assembly sequence. Each value corresponds to the type index of the car produced at that position.",
+      "example": "[0, 1, 2, 1, 0, 2]",
+      "type": "List[int]",
+      "size": "[sum(demand)]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds one local adjacency rule on the existing production sequence; it does not introduce new variable families or alter the objective.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
     },
-    "prob_type": "csp"
+    "base_model": {
+      "decision_variable_count": 60,
+      "constraint_count": 88
+    },
+    "cr_impact": {
+      "affected_decision_variables": 10,
+      "affected_constraints": 9,
+      "notes": "Variable families: sequence. Constraint groups: no_adjacent_identical_types."
+    }
+  }
 }

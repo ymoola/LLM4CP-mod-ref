@@ -27,5 +27,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "Reframes the optimization from cost minimization to profit maximization, which changes how existing opening and supply-cost variables are evaluated but leaves feasibility intact.",
+    "change_types": {
+      "constraints": "none",
+      "decision_variables": "none",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 25,
+      "constraint_count": 25
+    },
+    "cr_impact": {
+      "affected_decision_variables": 15,
+      "affected_constraints": 0,
+      "notes": "Variable families: o and c. Constraint groups: none. Objective change: modify."
+    }
+  }
 }

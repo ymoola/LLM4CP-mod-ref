@@ -28,5 +28,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "csp"
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds one exclusion disjunction per container-region pair while leaving boundary and pairwise separation structure otherwise unchanged.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 10,
+      "constraint_count": 20
+    },
+    "cr_impact": {
+      "affected_decision_variables": 10,
+      "affected_constraints": 10,
+      "notes": "Variable families: x and y. Constraint groups: restricted_deck_regions."
+    }
+  }
 }

@@ -17,5 +17,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "Adds non-overlap disjunctions between affected jobs and maintenance windows, creating a broader temporal interaction pattern without changing the objective.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 8,
+      "constraint_count": 12
+    },
+    "cr_impact": {
+      "affected_decision_variables": 8,
+      "affected_constraints": 12,
+      "notes": "Variable families: s. Constraint groups: resource_maintenance_windows."
+    }
+  }
 }

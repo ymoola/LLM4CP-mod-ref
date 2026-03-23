@@ -16,5 +16,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "csp"
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "Replaces the original non-repetition rule with one aggregated lower-bound constraint for every golfer pair, changing the global interaction pattern without adding helper variables.",
+    "change_types": {
+      "constraints": "modify",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 280,
+      "constraint_count": 17030
+    },
+    "cr_impact": {
+      "affected_decision_variables": 280,
+      "affected_constraints": 378,
+      "notes": "Variable families: g. Constraint groups: minimum_pair_meetings."
+    }
+  }
 }

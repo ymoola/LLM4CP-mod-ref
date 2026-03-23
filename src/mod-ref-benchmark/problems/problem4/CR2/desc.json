@@ -27,5 +27,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds one feasibility filter per store assignment while keeping capacities, service logic, and the objective otherwise unchanged.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 25,
+      "constraint_count": 25
+    },
+    "cr_impact": {
+      "affected_decision_variables": 10,
+      "affected_constraints": 10,
+      "notes": "Variable families: w. Constraint groups: feasible_store_warehouse_assignments."
+    }
+  }
 }

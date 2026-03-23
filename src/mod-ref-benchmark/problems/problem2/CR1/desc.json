@@ -19,5 +19,23 @@
       "size": "[n_templates, n_var]"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "Adds a pairwise balancing requirement across every ordered template pair, creating a global coupling over production decisions.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 30,
+      "constraint_count": 12
+    },
+    "cr_impact": {
+      "affected_decision_variables": 3,
+      "affected_constraints": 9,
+      "notes": "Variable families: production. Constraint groups: template_load_balance."
+    }
+  }
 }

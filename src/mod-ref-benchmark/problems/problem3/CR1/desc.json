@@ -15,5 +15,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Only changes the target cardinality of the existing task-coverage constraints from one covering shift to two.",
+    "change_types": {
+      "constraints": "modify",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 2503,
+      "constraint_count": 53
+    },
+    "cr_impact": {
+      "affected_decision_variables": 2503,
+      "affected_constraints": 53,
+      "notes": "Variable families: x. Constraint groups: task_coverage_cardinality."
+    }
+  }
 }

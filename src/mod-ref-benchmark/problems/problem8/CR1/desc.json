@@ -22,5 +22,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Adds tardiness variables for every job, introduces a total-tardiness aggregation, and changes the objective away from makespan minimization.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "add",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 5,
+      "constraint_count": 6
+    },
+    "cr_impact": {
+      "affected_decision_variables": 11,
+      "affected_constraints": 6,
+      "notes": "Variable families: s, tardiness, and total_tardiness. Constraint groups: activity_tardiness_definition and total_tardiness_aggregation. Objective change: modify."
+    }
+  }
 }

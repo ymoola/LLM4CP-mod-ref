@@ -20,5 +20,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Replaces a hard pairwise feasibility rule with explicit pair-tracking helper variables and a new optimization objective over repeated pairings.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "add"
+    },
+    "base_model": {
+      "decision_variable_count": 45,
+      "constraint_count": 375
+    },
+    "cr_impact": {
+      "affected_decision_variables": 333,
+      "affected_constraints": 648,
+      "notes": "Variable families: g, meet, pair_count, repeats, and has_meeting. Constraint groups: pairing_uniqueness, pair_meeting_tracking, and pair_repeat_counting. Objective change: add."
+    }
+  }
 }

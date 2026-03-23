@@ -17,5 +17,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds an upper-bound refinement on selected precedence arcs while keeping the original precedence/resource architecture and objective intact.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 11,
+      "constraint_count": 17
+    },
+    "cr_impact": {
+      "affected_decision_variables": 11,
+      "affected_constraints": 15,
+      "notes": "Variable families: s. Constraint groups: precedence_max_delay_bounds."
+    }
+  }
 }

@@ -15,5 +15,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "csp"
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "Strengthens the core arithmetic condition from one equality to all six permutations, making the change global even though it stays within the same variable family.",
+    "change_types": {
+      "constraints": "modify",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 9,
+      "constraint_count": 2
+    },
+    "cr_impact": {
+      "affected_decision_variables": 9,
+      "affected_constraints": 6,
+      "notes": "Variable families: digits. Constraint groups: permutation_invariant_fraction_equations."
+    }
+  }
 }

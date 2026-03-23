@@ -28,5 +28,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Adds a new upgrade decision family and rewrites capacity handling so warehouse capacity becomes endogenous, with matching cost changes in the objective.",
+    "change_types": {
+      "constraints": "modify",
+      "decision_variables": "add",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 25,
+      "constraint_count": 25
+    },
+    "cr_impact": {
+      "affected_decision_variables": 15,
+      "affected_constraints": 5,
+      "notes": "Variable families: w and u. Constraint groups: warehouse_capacity_with_optional_upgrade. Objective change: modify."
+    }
+  }
 }

@@ -33,5 +33,23 @@
       "size": "[n_containers]"
     }
   },
-  "prob_type": "csp"
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Introduces rotation and effective-dimension helper variables, then rewrites both deck-boundary and pairwise separation logic to depend on orientation.",
+    "change_types": {
+      "constraints": "modify",
+      "decision_variables": "add",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 20,
+      "constraint_count": 65
+    },
+    "cr_impact": {
+      "affected_decision_variables": 50,
+      "affected_constraints": 85,
+      "notes": "Variable families: x, y, rot, eff_w, and eff_l. Constraint groups: rotation_dimension_linking, deck_boundary_with_rotation, and container_separation_with_rotation."
+    }
+  }
 }

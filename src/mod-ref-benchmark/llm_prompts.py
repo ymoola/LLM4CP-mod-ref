@@ -24,6 +24,12 @@ def extract_output_keys(ref_sol_format: dict[str, Any]) -> list[str]:
     return keys
 
 
+def strip_complexity_metadata(cr_desc: dict[str, Any]) -> dict[str, Any]:
+    sanitized = dict(cr_desc or {})
+    sanitized.pop("complexity", None)
+    return sanitized
+
+
 def build_parser_prompt(base_nl_description: str, numbered_model: str, schema: dict[str, Any]) -> str:
     schema_text = json.dumps(schema, indent=2)
     return f"""
@@ -57,6 +63,7 @@ def build_planner_prompt(
     previous_plan: dict[str, Any] | None = None,
     feedback: str | None = None,
 ) -> str:
+    prompt_cr_desc = strip_complexity_metadata(cr_desc)
     prompt = f"""
 You are the Planner agent. Given a change request (CR) and the existing CPMPy model, produce a precise edit plan indicating what needs to change (add/modify constraints or objectives) and where.
 
@@ -72,7 +79,7 @@ Guidelines:
 - If you cannot confidently point to a location, set target_lines to null and/or insert_after_line to null (do not guess line numbers).
 
 Change Request (CR) JSON:
-{json.dumps(cr_desc, indent=2)}
+{json.dumps(prompt_cr_desc, indent=2)}
 
 Base problem description (NL):
 {base_nl_description}
@@ -105,6 +112,7 @@ def build_planner_validator_prompt(
     numbered_model: str,
     schema: dict[str, Any],
 ) -> str:
+    prompt_cr_desc = strip_complexity_metadata(cr_desc)
     return f"""
 You are the Planner Validator agent. Review the planner output before any code is generated.
 
@@ -128,7 +136,7 @@ Base problem description:
 {base_nl_description}
 
 Change Request JSON:
-{json.dumps(cr_desc, indent=2)}
+{json.dumps(prompt_cr_desc, indent=2)}
 
 Parser mapping:
 {json.dumps(parser_mapping, indent=2)}

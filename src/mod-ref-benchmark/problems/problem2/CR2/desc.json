@@ -22,5 +22,23 @@
       "size": "[n_templates]"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds one extra diversity rule per template while leaving the overall model structure and objective unchanged.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 16,
+      "constraint_count": 9
+    },
+    "cr_impact": {
+      "affected_decision_variables": 14,
+      "affected_constraints": 2,
+      "notes": "Variable families: layout. Constraint groups: minimum_template_diversity."
+    }
+  }
 }

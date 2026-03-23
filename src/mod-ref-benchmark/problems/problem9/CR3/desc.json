@@ -39,5 +39,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Turns mandatory placement into optional subset selection, adds a load variable family and value aggregation, and makes boundary/separation constraints conditional on loading.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "add"
+    },
+    "base_model": {
+      "decision_variable_count": 12,
+      "constraint_count": 27
+    },
+    "cr_impact": {
+      "affected_decision_variables": 19,
+      "affected_constraints": 28,
+      "notes": "Variable families: x, y, load, and total_value. Constraint groups: deck_boundary_for_loaded_containers, conditional_container_separation, and loaded_value_aggregation. Objective change: add."
+    }
+  }
 }

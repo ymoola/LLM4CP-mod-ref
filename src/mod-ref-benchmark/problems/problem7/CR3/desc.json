@@ -17,5 +17,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "csp"
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Removes the original no-repeat structure and replaces it with explicit pair-meeting tracking plus a fairness requirement for every golfer, which is a broad structural reformulation.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 96,
+      "constraint_count": 1672
+    },
+    "cr_impact": {
+      "affected_decision_variables": 1476,
+      "affected_constraints": 3060,
+      "notes": "Variable families: g, meet, and met_pair. Constraint groups: pairing_uniqueness, distinct_partner_tracking, and per_player_variety_requirement."
+    }
+  }
 }

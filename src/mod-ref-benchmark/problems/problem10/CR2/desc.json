@@ -36,5 +36,23 @@
       "type": "int"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Removes the original zone-separation rule, adds travel-cost aggregation variables, and changes the objective to balance workload against cross-zone travel.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 12,
+      "constraint_count": 37
+    },
+    "cr_impact": {
+      "affected_decision_variables": 14,
+      "affected_constraints": 23,
+      "notes": "Variable families: p, w, total_workload, and total_travel_cost. Constraint groups: one_zone_per_nurse, total_workload_aggregation, and travel_cost_aggregation. Objective change: modify."
+    }
+  }
 }

@@ -17,5 +17,23 @@
       "index": "0-based"
     }
   },
-  "prob_type": "cop"
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds one global budget constraint over the existing shift-selection vector without changing the rest of the model.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 25,
+      "constraint_count": 23
+    },
+    "cr_impact": {
+      "affected_decision_variables": 25,
+      "affected_constraints": 1,
+      "notes": "Variable families: x. Constraint groups: total_selected_duration_limit."
+    }
+  }
 }
