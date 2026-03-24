@@ -1,0 +1,67 @@
+{
+  "source": "modref",
+  "name": "Steel Mill Slab Design - CR3",
+  "content": "Orders of the same colour should be kept together in the same slab whenever possible. If a colour appears on multiple slabs, each additional slab used by that colour incurs one unit of penalty. The aim is to minimize the total waste together with the total colour-splitting penalty.",
+  "value_info": [
+    "`capacities`: List[int] of allowed slab sizes.",
+    "`orders`: List of dicts, each with `size` (int) and `color` (int), representing customer orders.",
+    "`ref_opt_val`: Optional integer reference optimum for the combined objective; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`order_to_slab`: List[int] of length n_orders, where order_to_slab[i] is the slab index assigned to order i.",
+      "example": "[0, 1, 1, 1, 2, 2, 3]",
+      "type": "List[int]",
+      "size": "[n_orders]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`slab_loads`: List[int] of length n_slabs, where slab_loads[j] is the total weight of orders assigned to slab j.",
+      "example": "[10, 12, 13, 9, 0, 0, 0]",
+      "type": "List[int]",
+      "size": "[n_slabs]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`slab_losses`: List[int] of length n_slabs, where slab_losses[j] is the wasted capacity on slab j.",
+      "example": "[0, 0, 1, 1, 0, 0, 0]",
+      "type": "List[int]",
+      "size": "[n_slabs]",
+      "index": "0-based"
+    },
+    "var4": {
+      "descr": "`total_split_penalty`: Integer penalty for colours that are split across multiple slabs.",
+      "example": "1",
+      "type": "int"
+    },
+    "var5": {
+      "descr": "`total_loss`: Integer total wasted capacity across all slabs.",
+      "example": "2",
+      "type": "int"
+    },
+    "var6": {
+      "descr": "`total_objective`: Integer combined objective equal to total_loss + total_split_penalty.",
+      "example": "3",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "Adds helper-variable families for colour usage counts and split penalties, strengthens the colour-linking semantics, and changes the objective from pure waste minimization to a combined waste-plus-penalty objective.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 42,
+      "constraint_count": 70
+    },
+    "cr_impact": {
+      "affected_decision_variables": 9,
+      "affected_constraints": 30,
+      "notes": "Adds reverse use_color linking (21 constraints), per-colour slab counts and split penalties (6 constraints), and total aggregation constraints (3 constraints). New variable families: color_slab_count, split_penalty, total_split_penalty, total_loss, total_objective."
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "capacities": [10, 12, 14],
+  "orders": [
+    {"size": 10, "color": 2},
+    {"size": 4, "color": 3},
+    {"size": 3, "color": 3},
+    {"size": 5, "color": 3},
+    {"size": 7, "color": 1},
+    {"size": 6, "color": 1},
+    {"size": 9, "color": 1}
+  ],
+  "ref_opt_val": null
+}
