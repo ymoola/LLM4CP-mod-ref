@@ -40,13 +40,13 @@
       "objective": "none"
     },
     "base_model": {
-      "decision_variable_count": 12654,
-      "constraint_count": 12654
+      "decision_variable_count": 36,
+      "constraint_count": 54
     },
     "cr_impact": {
       "affected_decision_variables": 0,
-      "affected_constraints": 555,
-      "notes": "Adds one constraint family (forbidden_color_pairs) with n_forbidden_pairs × n_slabs = 5 × 111 = 555 scalar constraints over the existing use_color variable."
+      "affected_constraints": 6,
+      "notes": "Adds one forbidden-pair constraint per slab over the existing use_color variable, for 1 × 6 = 6 scalar constraints."
     }
   }
 }

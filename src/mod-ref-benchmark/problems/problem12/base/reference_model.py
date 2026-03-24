@@ -18,10 +18,10 @@ def build_model(capacities, orders):
 
     max_capacity = max(capacities)
 
-    # for each possible load, compute smallest feasible loss
-    possible_losses = [
+    # Empty slabs incur no loss; positive loads use the smallest feasible slab.
+    possible_losses = [0] + [
         min(c for c in capacities if c >= load) - load
-        for load in range(max_capacity + 1)
+        for load in range(1, max_capacity + 1)
     ]
 
     all_colors = sorted(set(colors))
@@ -75,5 +75,4 @@ def build_model(capacities, orders):
     model.minimize(sum(ls))
 
     return model, sb, ld, ls
-
 
