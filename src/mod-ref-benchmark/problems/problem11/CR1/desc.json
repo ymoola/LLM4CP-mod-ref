@@ -1,0 +1,47 @@
+{
+  "source": "modref",
+  "name": "Rotating Rostering - CR1",
+  "content": "Night shifts are considered more demanding than other shifts. The roster must now ensure that no employee works more than 2 night shifts in a row, while the existing minimum and maximum repetition rules for the other shift types remain unchanged.",
+  "value_info": [
+    "`n_days_per_week`: Integer number of days in a week (always 7).",
+    "`n_weeks`: Integer number of weeks in the roster cycle.",
+    "`s_min`: Integer minimum run length for any shift type.",
+    "`s_max`: Integer maximum run length for any shift type (applies to non-night shifts).",
+    "`requirements`: List[List[int]] of shape [n_days_per_week][4], where requirements[d][s] is the number of employees required on weekday d for shift s (0=off, 1=early, 2=late, 3=night)."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`x_roster`: List[int] of length n_days (= n_weeks * n_days_per_week), where x_roster[d] is the shift assigned on flattened day d of the cyclic roster (0=off, 1=early, 2=late, 3=night).",
+      "example": "[0, 1, 1, 2, 2, 0, 0, 3, 3, 1, ...]",
+      "type": "List[int]",
+      "size": "[n_days]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`y_roster`: List[List[int]] of shape [n_weeks][n_days_per_week], where y_roster[w][d] is the shift assigned on day d of week w.",
+      "example": "[[0, 1, 1, 2, 2, 0, 0], [3, 3, 1, 1, 2, 2, 2], ...]",
+      "type": "List[List[int]]",
+      "size": "[n_weeks][n_days_per_week]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "csp",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds a single localized constraint family that caps consecutive night shifts at 2, without touching any other variable or constraint group.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 112,
+      "constraint_count": 316
+    },
+    "cr_impact": {
+      "affected_decision_variables": 0,
+      "affected_constraints": 56,
+      "notes": "Adds one constraint family (night_max_run) over all 56 cyclic day positions in the x roster variable."
+    }
+  }
+}
