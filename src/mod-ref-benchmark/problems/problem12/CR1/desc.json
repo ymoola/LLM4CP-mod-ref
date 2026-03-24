@@ -1,0 +1,52 @@
+{
+  "source": "modref",
+  "name": "Steel Mill Slab Design - CR1",
+  "content": "Certain combinations of colours are incompatible and cannot be processed together in the same slab. A list of forbidden pairs of colours is provided, and no slab may contain orders whose colours form one of these forbidden pairs.",
+  "value_info": [
+    "`capacities`: List[int] of allowed slab sizes.",
+    "`orders`: List of dicts, each with `size` (int) and `color` (int), representing customer orders.",
+    "`forbidden_pairs`: List[List[int]] of pairs [color_a, color_b], where no slab may contain orders of both color_a and color_b simultaneously."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`order_to_slab`: List[int] of length n_orders, where order_to_slab[i] is the slab index assigned to order i.",
+      "example": "[0, 1, 0, 2, 1, ...]",
+      "type": "List[int]",
+      "size": "[n_orders]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`slab_loads`: List[int] of length n_slabs, where slab_loads[j] is the total weight of orders assigned to slab j.",
+      "example": "[13, 30, 9, 0, ...]",
+      "type": "List[int]",
+      "size": "[n_slabs]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`slab_losses`: List[int] of length n_slabs, where slab_losses[j] is the wasted capacity on slab j.",
+      "example": "[1, 0, 3, 0, ...]",
+      "type": "List[int]",
+      "size": "[n_slabs]",
+      "index": "0-based"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds a single localized constraint family over existing use_color variables, with no new decision variables or structural changes.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 12654,
+      "constraint_count": 12654
+    },
+    "cr_impact": {
+      "affected_decision_variables": 0,
+      "affected_constraints": 555,
+      "notes": "Adds one constraint family (forbidden_color_pairs) with n_forbidden_pairs × n_slabs = 5 × 111 = 555 scalar constraints over the existing use_color variable."
+    }
+  }
+}
