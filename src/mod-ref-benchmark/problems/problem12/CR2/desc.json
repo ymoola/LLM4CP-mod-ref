@@ -1,0 +1,58 @@
+{
+  "source": "modref",
+  "name": "Steel Mill Slab Design - CR2",
+  "content": "Each produced slab must be filled to at least a specified minimum percentage of its selected capacity. For example, if the minimum fill percentage is 80, then every used slab must carry at least 80% of the slab size chosen for it.",
+  "value_info": [
+    "`capacities`: List[int] of allowed slab sizes.",
+    "`orders`: List of dicts, each with `size` (int) and `color` (int), representing customer orders.",
+    "`min_fill_percent`: Integer minimum fill percentage required for every used slab.",
+    "`ref_opt_val`: Optional integer reference optimum for total loss; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`order_to_slab`: List[int] of length n_orders, where order_to_slab[i] is the slab index assigned to order i.",
+      "example": "[0, 1, 0, 2, 1, ...]",
+      "type": "List[int]",
+      "size": "[n_orders]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`slab_loads`: List[int] of length n_slabs, where slab_loads[j] is the total weight of orders assigned to slab j.",
+      "example": "[13, 30, 9, 0, ...]",
+      "type": "List[int]",
+      "size": "[n_slabs]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`slab_losses`: List[int] of length n_slabs, where slab_losses[j] is the wasted capacity on slab j.",
+      "example": "[1, 0, 3, 0, ...]",
+      "type": "List[int]",
+      "size": "[n_slabs]",
+      "index": "0-based"
+    },
+    "var4": {
+      "descr": "`total_loss`: Integer total wasted capacity across all slabs.",
+      "example": "248",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "Adds one localized utilization constraint per slab over the existing load and loss variables, with no new decision-variable families and no objective change.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 35,
+      "constraint_count": 70
+    },
+    "cr_impact": {
+      "affected_decision_variables": 0,
+      "affected_constraints": 7,
+      "notes": "Adds one minimum-fill constraint for each slab using the existing ld and ls variables."
+    }
+  }
+}

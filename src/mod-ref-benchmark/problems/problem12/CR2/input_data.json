@@ -1,0 +1,14 @@
+{
+  "capacities": [12, 20],
+  "orders": [
+    {"size": 9, "color": 3},
+    {"size": 3, "color": 2},
+    {"size": 8, "color": 3},
+    {"size": 6, "color": 3},
+    {"size": 6, "color": 2},
+    {"size": 9, "color": 3},
+    {"size": 4, "color": 2}
+  ],
+  "min_fill_percent": 80,
+  "ref_opt_val": 7
+}
