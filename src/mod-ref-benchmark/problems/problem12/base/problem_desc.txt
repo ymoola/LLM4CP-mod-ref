@@ -1,0 +1,7 @@
+A steel mill produces slabs of a limited set of available sizes. Each customer order has a required weight and a colour. The colour represents the production route that the slab must follow through the mill.
+
+The task is to assign all orders to slabs. The number of slabs used and the size chosen for each slab must be determined as part of the solution.
+
+Each slab must be large enough to hold the total weight of the orders assigned to it. In addition, each slab may contain orders of at most two different colours.
+
+The goal is to satisfy all orders while minimizing the total amount of wasted steel, where waste is the unused capacity of the slabs that are produced.
