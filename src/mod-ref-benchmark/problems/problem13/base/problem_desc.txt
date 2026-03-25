@@ -1,0 +1,5 @@
+A set of wooden planks is available for building a bookshelf unit. All planks have the same thickness, but they may have different lengths. The bookshelf is made using two equal-length vertical side pieces and several horizontal shelves.
+
+Each shelf must have the same width. The shelves must be spaced far enough apart to hold books, and the top shelf must be below the top of the side pieces so that the sides still act as bookends. Planks may be cut into multiple pieces, but some material is lost with each cut, and pieces from different planks cannot be joined together.
+
+The goal is to decide how to cut the planks in order to build a valid bookshelf unit that provides as much total shelf space as possible.

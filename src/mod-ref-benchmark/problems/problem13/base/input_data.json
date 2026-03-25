@@ -1,0 +1,6 @@
+{
+  "thickness": 2,
+  "cut_cost": 1,
+  "vertical_gap": 20,
+  "lengths": [120, 120, 90, 90, 90, 90]
+}
