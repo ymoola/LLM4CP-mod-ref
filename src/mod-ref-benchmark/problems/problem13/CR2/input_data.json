@@ -1,0 +1,8 @@
+{
+  "thickness": 2,
+  "cut_cost": 1,
+  "vertical_gap": 20,
+  "lengths": [90, 90, 60, 60, 45, 45, 45],
+  "max_bays": 3,
+  "ref_opt_val": 300
+}

@@ -1,0 +1,75 @@
+{
+  "source": "modref",
+  "name": "Bookshelf Design - CR2",
+  "content": "The bookshelf may now include full-height internal vertical dividers, allowing the design to create one, two, or three side-by-side bays. The design must decide how many bays to build, the width of each bay, the common bookshelf height, and the shelf pieces needed for that layout. Outer side panels and any internal dividers must all be cut from the available planks, and the shelf pieces must still respect the same cutting-loss assumptions as before. The aim is to maximize the total usable shelf space across all bays.",
+  "value_info": [
+    "`thickness`: Integer thickness of every plank and shelf board.",
+    "`cut_cost`: Integer amount of length lost each time a plank is cut into an additional piece.",
+    "`vertical_gap`: Integer clearance required between consecutive shelf levels.",
+    "`lengths`: List[int] of available plank lengths.",
+    "`max_bays`: Integer maximum number of bays the design may use. In this CR, the model chooses between 1 and `max_bays` bays.",
+    "`ref_opt_val`: Optional integer reference optimum for `total_usable_shelf_space`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`piece_lengths`: List[int] of length max_pieces. The first `max_bays + 1` entries correspond to outer side panels and optional internal dividers. The remaining entries are shelf pieces ordered by shelf level first, then by bay. A value of 0 means the slot is unused.",
+      "example": "[45, 45, 45, 0, 90, 60, 0, 90, 60, 0, 0, 0, 0, 0, 0, 0]",
+      "type": "List[int]",
+      "size": "[max_pieces]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`piece_from`: List[int] of length max_pieces, where piece_from[i] is the plank index from which piece i is cut.",
+      "example": "[4, 5, 6, 0, 1, 2, 0, 0, 3, 2, 4, 0, 0, 3, 0, 0]",
+      "type": "List[int]",
+      "size": "[max_pieces]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`num_bays`: Integer number of side-by-side bays used in the final design.",
+      "example": "2",
+      "type": "int"
+    },
+    "var4": {
+      "descr": "`num_shelves`: Integer number of shelf levels repeated across all used bays.",
+      "example": "2",
+      "type": "int"
+    },
+    "var5": {
+      "descr": "`bay_widths`: List[int] of length `max_bays`, where bay_widths[b] is the width of bay b and 0 marks an unused bay slot.",
+      "example": "[90, 60, 0]",
+      "type": "List[int]",
+      "size": "[max_bays]",
+      "index": "0-based"
+    },
+    "var6": {
+      "descr": "`unit_height`: Integer common height of all outer side panels and internal dividers.",
+      "example": "45",
+      "type": "int"
+    },
+    "var7": {
+      "descr": "`total_usable_shelf_space`: Integer total width of all used shelf pieces across every shelf level and bay.",
+      "example": "160",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "This CR changes the bookshelf from a single-span design into a configurable multi-bay structure with optional internal dividers. It adds bay-selection and per-bay width decisions, restructures how shelf pieces are generated, and modifies the objective from total width of identical shelves to total usable shelf space over a chosen bay layout.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "mixed",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 42,
+      "constraint_count": 55
+    },
+    "cr_impact": {
+      "affected_decision_variables": 42,
+      "affected_constraints": 67,
+      "notes": "Adds `n_bays` (1), `bay_widths` (3), `bay_used` (3), `level_used` (4), and `total_usable_shelf_space` (1), and extends the base `piece_lengths`, `piece_from`, and `used` families by 10 slots each to represent dividers and per-level per-bay shelves. The CR replaces the single-span shelf-structure constraints with 67 structural constraints for vertical-panel selection, bay packing, shelf-level packing, and per-level per-bay shelf realization."
+    }
+  }
+}
