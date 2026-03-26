@@ -107,24 +107,3 @@ def build_model(thickness, cut_cost, vertical_gap, lengths):
     return model, piece_lengths, piece_from, n_shelves, shelf_width, unit_height
 
 
-if __name__ == "__main__":
-    with open("input_data.json") as f:
-        data = json.load(f)
-
-    model, piece_lengths, piece_from, n_shelves, shelf_width, unit_height = build_model(
-        data["thickness"],
-        data["cut_cost"],
-        data["vertical_gap"],
-        data["lengths"]
-    )
-
-    solution = {}
-
-    if model.solve():
-        solution["piece_lengths"] = piece_lengths.value().tolist()
-        solution["piece_from"] = piece_from.value().tolist()
-        solution["num_shelves"] = int(n_shelves.value())
-        solution["shelf_width"] = int(shelf_width.value())
-        solution["unit_height"] = int(unit_height.value())
-
-    print(json.dumps(solution))
