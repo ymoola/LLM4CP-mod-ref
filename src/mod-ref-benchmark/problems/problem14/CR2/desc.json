@@ -1,0 +1,57 @@
+{
+  "source": "modref",
+  "name": "Tank Allocation Problem - CR2",
+  "content": "Each cargo is now associated with a discharge-port order along the vessel's route. The loading plan must respect operational accessibility rules between specified tank pairs, so that a tank position that must remain accessible for an earlier-port cargo is not effectively blocked by a later-port cargo. The allocation must still ship every required cargo volume, respect tank-specific cargo restrictions, and avoid incompatible cargoes in neighbouring tanks. The aim remains to maximize the total capacity of unused tanks.",
+  "value_info": [
+    "`num_cargos`: Integer number of cargoes that must be shipped.",
+    "`num_tanks`: Integer number of available tanks.",
+    "`capacities`: List[int] of tank capacities, one per tank.",
+    "`neighbours`: List[List[int]] where `neighbours[t]` lists the tanks adjacent to tank `t`.",
+    "`impossible_cargos`: List[List[int]] where `impossible_cargos[t]` lists 1-based cargo ids that may not be assigned to tank `t`.",
+    "`volume_to_ship`: List[int] where `volume_to_ship[c]` is the exact volume required for cargo `c+1`.",
+    "`incompatibilities`: List[List[int]] of 1-based cargo-id pairs that may not be placed in neighbouring tanks.",
+    "`discharge_order`: List[int] of length `num_cargos`, where a smaller number means that cargo is discharged earlier in the route.",
+    "`accessibility_pairs`: List[List[int]] of ordered tank-index pairs `[a, b]`. If both tanks are used, the cargo in tank `a` must have a discharge order no later than the cargo in tank `b`.",
+    "`ref_opt_val`: Optional integer reference optimum for `unused_capacity`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`cargo_in_tank`: List[int] of length `num_tanks`, where `cargo_in_tank[t]` is 0 if tank `t` is unused and otherwise is the 1-based cargo id assigned to that tank.",
+      "example": "[1, 0, 4, 3, 2, 4]",
+      "type": "List[int]",
+      "size": "[num_tanks]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`load`: List[int] of length `num_tanks`, where `load[t]` is the loaded volume in tank `t`.",
+      "example": "[200, 0, 500, 300, 250, 200]",
+      "type": "List[int]",
+      "size": "[num_tanks]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`unused_capacity`: Integer total capacity of all tanks left unused in the final loading plan.",
+      "example": "650",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "medium",
+    "difficulty_rationale": "This CR keeps the same allocation variables and objective, but it adds a structured family of discharge-accessibility constraints over ordered tank pairs and cargo-order combinations. The model architecture stays the same, yet the feasible cargo-tank assignments are materially reshaped.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 13,
+      "constraint_count": 28
+    },
+    "cr_impact": {
+      "affected_decision_variables": 6,
+      "affected_constraints": 18,
+      "notes": "The CR uses only the existing `cargo_in_tank` vector. With 3 accessibility pairs and 6 later-before-earlier cargo combinations induced by the shipped discharge order, it adds 18 forbidden-assignment constraints in total."
+    }
+  }
+}
