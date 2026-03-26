@@ -1,0 +1,56 @@
+{
+  "source": "modref",
+  "name": "Tank Allocation Problem - CR1",
+  "content": "The vessel must remain balanced during loading. The input now specifies one or more balance rules, where each rule compares the total loaded volume in two tank sections and limits how far apart those section totals may be. The allocation must still ship every required cargo volume, respect tank-specific cargo restrictions, and avoid incompatible cargoes in neighbouring tanks. The aim remains to maximize the total capacity of unused tanks.",
+  "value_info": [
+    "`num_cargos`: Integer number of cargoes that must be shipped.",
+    "`num_tanks`: Integer number of available tanks.",
+    "`capacities`: List[int] of tank capacities, one per tank.",
+    "`neighbours`: List[List[int]] where `neighbours[t]` lists the tanks adjacent to tank `t`.",
+    "`impossible_cargos`: List[List[int]] where `impossible_cargos[t]` lists 1-based cargo ids that may not be assigned to tank `t`.",
+    "`volume_to_ship`: List[int] where `volume_to_ship[c]` is the exact volume required for cargo `c+1`.",
+    "`incompatibilities`: List[List[int]] of 1-based cargo-id pairs that may not be placed in neighbouring tanks.",
+    "`balance_rules`: List of balance-rule objects. Each rule has `section_a` (List[int] of tank indices), `section_b` (List[int] of tank indices), and `tolerance` (int maximum allowed difference between the total loaded volumes of the two sections).",
+    "`ref_opt_val`: Optional integer reference optimum for `unused_capacity`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`cargo_in_tank`: List[int] of length `num_tanks`, where `cargo_in_tank[t]` is 0 if tank `t` is unused and otherwise is the 1-based cargo id assigned to that tank.",
+      "example": "[4, 0, 1, 0, 2, 2, 3, 3]",
+      "type": "List[int]",
+      "size": "[num_tanks]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`load`: List[int] of length `num_tanks`, where `load[t]` is the loaded volume in tank `t`.",
+      "example": "[250, 0, 600, 0, 250, 250, 150, 200]",
+      "type": "List[int]",
+      "size": "[num_tanks]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`unused_capacity`: Integer total capacity of all tanks left unused in the final loading plan.",
+      "example": "1200",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "This CR keeps the original allocation architecture and objective intact. It only adds a small family of aggregate load-balance constraints over pre-specified tank sections.",
+    "change_types": {
+      "constraints": "add",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 17,
+      "constraint_count": 54
+    },
+    "cr_impact": {
+      "affected_decision_variables": 8,
+      "affected_constraints": 4,
+      "notes": "The CR uses only the existing `load` vector. With two shipped balance rules, it adds two upper/lower difference bounds per rule, for four scalar constraints in total."
+    }
+  }
+}
