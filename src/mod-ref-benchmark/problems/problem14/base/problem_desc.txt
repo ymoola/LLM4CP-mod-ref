@@ -1,0 +1,7 @@
+A vessel has a set of tanks that can be used to transport chemical cargoes. Each cargo has a required volume that must be shipped, and each tank has a fixed capacity.
+
+Each tank may either be left empty or assigned to exactly one cargo. A cargo may be distributed across multiple tanks, but no tank may contain more than one cargo.
+
+Not every cargo can be placed in every tank. In addition, some pairs of cargoes are incompatible and may not be placed in neighbouring tanks.
+
+The goal is to assign cargoes and loading volumes to tanks so that all required cargo volumes are shipped, all compatibility restrictions are respected, and the total capacity of unused tanks is maximized.
