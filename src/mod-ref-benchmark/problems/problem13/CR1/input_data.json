@@ -1,0 +1,29 @@
+{
+  "thickness": 2,
+  "cut_cost": 1,
+  "vertical_gap": 10,
+  "lengths": [60, 60, 45, 45, 45, 45],
+  "book_groups": [
+    {
+      "min_clearance": 10,
+      "demand_width": 26
+    },
+    {
+      "min_clearance": 14,
+      "demand_width": 22
+    },
+    {
+      "min_clearance": 18,
+      "demand_width": 20
+    },
+    {
+      "min_clearance": 26,
+      "demand_width": 18
+    },
+    {
+      "min_clearance": 30,
+      "demand_width": 16
+    }
+  ],
+  "ref_opt_val": 93
+}
