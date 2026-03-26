@@ -1,0 +1,8 @@
+{
+  "thickness": 2,
+  "cut_cost": 1,
+  "vertical_gap": 20,
+  "lengths": [80, 80, 70, 70, 60],
+  "min_bottom_open_height": 20,
+  "ref_opt_val": 160
+}

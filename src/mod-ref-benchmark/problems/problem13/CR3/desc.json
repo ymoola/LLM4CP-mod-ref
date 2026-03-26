@@ -1,0 +1,68 @@
+{
+  "source": "modref",
+  "name": "Bookshelf Design - CR3",
+  "content": "The bookshelf must now leave an open bottom zone with no shelf placed below a specified minimum height from the floor of the unit. The design must still choose the overall bookshelf height, the number of shelves, and how to cut the available planks, but it must reserve this lower space before the first shelf is placed. All higher shelves must continue to satisfy the usual spacing requirements, and the aim remains to maximize the total usable shelf space.",
+  "value_info": [
+    "`thickness`: Integer thickness of every plank and shelf board.",
+    "`cut_cost`: Integer amount of length lost each time a plank is cut into an additional piece.",
+    "`vertical_gap`: Integer clearance required above each shelf level.",
+    "`lengths`: List[int] of available plank lengths.",
+    "`min_bottom_open_height`: Integer minimum height that must remain open below the first shelf.",
+    "`ref_opt_val`: Optional integer reference optimum for `total_usable_shelf_space`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`piece_lengths`: List[int] of length max_pieces, where the first two entries are the upright side pieces and the remaining entries are shelf pieces. A value of 0 means the slot is unused.",
+      "example": "[66, 66, 70, 70, 0]",
+      "type": "List[int]",
+      "size": "[max_pieces]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`piece_from`: List[int] of length max_pieces, where piece_from[i] is the plank index from which piece i is cut.",
+      "example": "[1, 2, 0, 3, 0]",
+      "type": "List[int]",
+      "size": "[max_pieces]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`num_shelves`: Integer number of shelf boards used in the design.",
+      "example": "2",
+      "type": "int"
+    },
+    "var4": {
+      "descr": "`shelf_width`: Integer common width shared by all used shelf boards.",
+      "example": "70",
+      "type": "int"
+    },
+    "var5": {
+      "descr": "`unit_height`: Integer common height of the two upright side pieces.",
+      "example": "66",
+      "type": "int"
+    },
+    "var6": {
+      "descr": "`total_usable_shelf_space`: Integer total width of all used shelf boards.",
+      "example": "140",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "This CR keeps the single-span bookshelf structure intact and changes only the height-feasibility rule by adding a reserved open bottom zone. A single helper variable is added so the printed solution can report total usable shelf space explicitly.",
+    "change_types": {
+      "constraints": "modify",
+      "decision_variables": "add",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 33,
+      "constraint_count": 43
+    },
+    "cr_impact": {
+      "affected_decision_variables": 1,
+      "affected_constraints": 2,
+      "notes": "Adds `total_usable_shelf_space` (1) for explicit reporting, replaces the single height-feasibility constraint with a bottom-open-zone version, and adds one equality linking the reported objective value to the shelf-piece lengths. The optimization target itself is unchanged."
+    }
+  }
+}
