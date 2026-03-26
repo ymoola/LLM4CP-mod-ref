@@ -13,14 +13,14 @@
   "ref_sol_format": {
     "var1": {
       "descr": "`piece_lengths`: List[int] of length max_pieces, where piece_lengths[i] is the length of piece i and 0 means the piece slot is unused.",
-      "example": "[60, 60, 45, 45, 45, 0, 0]",
+      "example": "[64, 64, 40, 40, 40, 0, 0]",
       "type": "List[int]",
       "size": "[max_pieces]",
       "index": "0-based"
     },
     "var2": {
       "descr": "`piece_from`: List[int] of length max_pieces, where piece_from[i] is the plank index from which piece i is cut.",
-      "example": "[0, 1, 5, 4, 3, 2, 5]",
+      "example": "[0, 1, 2, 3, 4, 0, 0]",
       "type": "List[int]",
       "size": "[max_pieces]",
       "index": "0-based"
@@ -32,31 +32,31 @@
     },
     "var4": {
       "descr": "`shelf_width`: Integer common width shared by all used shelf boards.",
-      "example": "45",
+      "example": "40",
       "type": "int"
     },
     "var5": {
       "descr": "`unit_height`: Integer common height of the two upright side pieces.",
-      "example": "60",
+      "example": "64",
       "type": "int"
     },
     "var6": {
       "descr": "`shelf_clearances`: List[int] of length max_shelves, where shelf_clearances[s] is the vertical clearance assigned to shelf compartment s and 0 means the shelf slot is unused.",
-      "example": "[10, 14, 30, 0, 0]",
+      "example": "[14, 18, 30, 0, 0]",
       "type": "List[int]",
       "size": "[max_shelves]",
       "index": "0-based"
     },
     "var7": {
       "descr": "`allocated_widths`: Matrix of size n_groups by max_shelves, where allocated_widths[g][s] is the amount of width from book group g assigned to shelf compartment s.",
-      "example": "[[3, 23, 0, 0, 0], [0, 22, 0, 0, 0], [0, 0, 20, 0, 0], [0, 0, 9, 0, 0], [0, 0, 16, 0, 0]]",
+      "example": "[[22, 0, 0, 0, 0], [18, 0, 0, 0, 0], [0, 20, 0, 0, 0], [0, 0, 12, 0, 0], [0, 0, 16, 0, 0]]",
       "type": "List[List[int]]",
       "size": "[n_groups, max_shelves]",
       "index": "0-based"
     },
     "var8": {
       "descr": "`total_accommodated_width`: Integer total amount of book-group demand width accommodated by the bookshelf design.",
-      "example": "43",
+      "example": "88",
       "type": "int"
     }
   },

@@ -13,21 +13,21 @@
   "ref_sol_format": {
     "var1": {
       "descr": "`piece_lengths`: List[int] of length max_pieces. The first `max_bays + 1` entries correspond to outer side panels and optional internal dividers. The remaining entries are shelf pieces ordered by shelf level first, then by bay. A value of 0 means the slot is unused.",
-      "example": "[45, 45, 45, 0, 90, 60, 0, 90, 60, 0, 0, 0, 0, 0, 0, 0]",
+      "example": "[42, 42, 0, 0, 70, 0, 0, 70, 0, 0, 0, 0, 0, 0, 0, 0]",
       "type": "List[int]",
       "size": "[max_pieces]",
       "index": "0-based"
     },
     "var2": {
       "descr": "`piece_from`: List[int] of length max_pieces, where piece_from[i] is the plank index from which piece i is cut.",
-      "example": "[4, 5, 6, 0, 1, 2, 0, 0, 3, 2, 4, 0, 0, 3, 0, 0]",
+      "example": "[0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0]",
       "type": "List[int]",
       "size": "[max_pieces]",
       "index": "0-based"
     },
     "var3": {
       "descr": "`num_bays`: Integer number of side-by-side bays used in the final design.",
-      "example": "2",
+      "example": "1",
       "type": "int"
     },
     "var4": {
@@ -37,19 +37,19 @@
     },
     "var5": {
       "descr": "`bay_widths`: List[int] of length `max_bays`, where bay_widths[b] is the width of bay b and 0 marks an unused bay slot.",
-      "example": "[90, 60, 0]",
+      "example": "[70, 0, 0]",
       "type": "List[int]",
       "size": "[max_bays]",
       "index": "0-based"
     },
     "var6": {
       "descr": "`unit_height`: Integer common height of all outer side panels and internal dividers.",
-      "example": "45",
+      "example": "42",
       "type": "int"
     },
     "var7": {
       "descr": "`total_usable_shelf_space`: Integer total width of all used shelf pieces across every shelf level and bay.",
-      "example": "160",
+      "example": "140",
       "type": "int"
     }
   },
