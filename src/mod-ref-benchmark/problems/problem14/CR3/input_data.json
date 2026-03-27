@@ -1,0 +1,24 @@
+{
+  "num_cargos": 4,
+  "num_tanks": 4,
+  "capacities": [600, 500, 400, 300],
+  "neighbours": [
+    [1],
+    [0, 2],
+    [1, 3],
+    [2]
+  ],
+  "impossible_cargos": [
+    [],
+    [],
+    [],
+    []
+  ],
+  "volume_to_ship": [250, 200, 300, 250],
+  "incompatibilities": [
+    [1, 4]
+  ],
+  "splittable_tanks": [0, 1],
+  "divider_loss": 50,
+  "ref_opt_val": 600
+}

@@ -1,0 +1,64 @@
+{
+  "source": "modref",
+  "name": "Tank Allocation Problem - CR3",
+  "content": "Some tanks may now optionally be split into two smaller subcompartments using portable internal bulkheads. A split tank may carry up to two different cargoes, but its usable capacity is reduced by a fixed divider loss. Tanks that are not split behave as in the original problem and may carry at most one cargo. The loading plan must still ship every required cargo volume, respect tank-specific cargo restrictions, and avoid incompatible cargoes in neighbouring tanks. The aim remains to maximize the total capacity of unused tanks.",
+  "value_info": [
+    "`num_cargos`: Integer number of cargoes that must be shipped.",
+    "`num_tanks`: Integer number of available tanks.",
+    "`capacities`: List[int] of tank capacities, one per tank.",
+    "`neighbours`: List[List[int]] where `neighbours[t]` lists the tanks adjacent to tank `t`.",
+    "`impossible_cargos`: List[List[int]] where `impossible_cargos[t]` lists 1-based cargo ids that may not be assigned to tank `t`.",
+    "`volume_to_ship`: List[int] where `volume_to_ship[c]` is the exact volume required for cargo `c+1`.",
+    "`incompatibilities`: List[List[int]] of 1-based cargo-id pairs that may not be placed in neighbouring tanks.",
+    "`splittable_tanks`: List[int] of tank indices that are allowed to use an internal divider.",
+    "`divider_loss`: Integer capacity loss incurred when a tank is split.",
+    "`ref_opt_val`: Optional integer reference optimum for `unused_capacity`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`split_tank`: List[int] of length `num_tanks`, where `split_tank[t]` is 1 if tank `t` is split and 0 otherwise.",
+      "example": "[1, 0, 0, 0]",
+      "type": "List[int]",
+      "size": "[num_tanks]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`cargo_in_tank`: Matrix of size `num_tanks x 2`. Entry `[t][s]` is 0 if subcompartment slot `s` of tank `t` is unused, otherwise it is the 1-based cargo id assigned there.",
+      "example": "[[1, 2], [3, 0], [4, 0], [0, 0]]",
+      "type": "List[List[int]]",
+      "size": "[num_tanks, 2]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`load`: Matrix of size `num_tanks x 2`, where `load[t][s]` is the loaded volume in subcompartment slot `s` of tank `t`.",
+      "example": "[[250, 200], [300, 0], [250, 0], [0, 0]]",
+      "type": "List[List[int]]",
+      "size": "[num_tanks, 2]",
+      "index": "0-based"
+    },
+    "var4": {
+      "descr": "`unused_capacity`: Integer total capacity of all tanks left completely unused in the final loading plan.",
+      "example": "300",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "This CR changes the core tank-occupancy structure by allowing optional split tanks, adding a split flag and two cargo/load slots per tank, and reformulating capacity and neighbour-compatibility logic around subcompartments. The objective stays the same, but the feasible design space is structurally different.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "mixed",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 9,
+      "constraint_count": 20
+    },
+    "cr_impact": {
+      "affected_decision_variables": 20,
+      "affected_constraints": 75,
+      "notes": "The CR replaces the single cargo/load slot per tank with a `num_tanks x 2` cargo matrix, a `num_tanks x 2` load matrix, and a `split_tank` vector. It rewrites tank-capacity logic, exact-shipment aggregation, neighbour incompatibility checks, and unused-tank detection around subcompartment semantics."
+    }
+  }
+}
