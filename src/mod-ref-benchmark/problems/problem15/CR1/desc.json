@@ -1,0 +1,46 @@
+{
+  "source": "modref",
+  "name": "Winner Determination Problem - CR1",
+  "content": "Items are now item types with available quantities rather than unique single-copy items. Each bid requests specified quantities of several item types, and a bid may be accepted only if the auction still has enough units available for every requested type. The aim remains to choose accepted bids that maximize total revenue.",
+  "value_info": [
+    "`n_items`: Integer number of item types available in the auction.",
+    "`bid_values`: List[int] where `bid_values[b]` is the value of bid `b`.",
+    "`bid_items`: List[List[int]] where `bid_items[b]` lists the 1-based item-type ids requested by bid `b`.",
+    "`bid_quantities`: List[List[int]] where `bid_quantities[b][k]` is the quantity requested for item type `bid_items[b][k]` in bid `b`.",
+    "`item_capacities`: List[int] of length `n_items`, where `item_capacities[i]` is the total available quantity of item type `i+1`.",
+    "`ref_opt_val`: Optional integer reference optimum for `revenue`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`selected_bids`: List[int] of accepted bid indices.",
+      "example": "[0, 4, 5]",
+      "type": "List[int]",
+      "size": "[k]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`revenue`: Integer total value collected from the accepted bids.",
+      "example": "140",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "low",
+    "difficulty_rationale": "This CR keeps the same bid-selection structure and objective. It only replaces the single-copy item-capacity constraints with quantity-based capacity constraints over item types.",
+    "change_types": {
+      "constraints": "modify",
+      "decision_variables": "none",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 7,
+      "constraint_count": 5
+    },
+    "cr_impact": {
+      "affected_decision_variables": 6,
+      "affected_constraints": 4,
+      "notes": "The CR still uses only the existing bid-selection vector `x`. The four per-item compatibility constraints are rewritten as quantity-capacity constraints using `bid_quantities` and `item_capacities`."
+    }
+  }
+}
