@@ -1,0 +1,5 @@
+In a combinatorial auction, each bid offers a value for a specific set of items.
+
+A bid may be accepted or rejected. Two bids are incompatible if they include at least one common item, because the same item cannot be assigned to more than one accepted bid. Compatible bids are bids whose item sets are disjoint.
+
+The goal is to choose a set of mutually compatible bids that maximizes the total value collected.
