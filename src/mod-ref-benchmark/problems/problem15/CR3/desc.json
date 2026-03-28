@@ -1,0 +1,62 @@
+{
+  "source": "modref",
+  "name": "Winner Determination Problem - CR3",
+  "content": "The seller may keep some items for internal use instead of selling them through accepted bids. Each reserved item contributes a known reserve value. The aim is to choose a set of mutually compatible bids together with a set of reserved items so that each item is used at most once and the total value from accepted bids and reserved items is maximized.",
+  "value_info": [
+    "`n_items`: Integer total number of items in the auction; valid item ids are the 1-based integers `{1, ..., n_items}`.",
+    "`bid_values`: List[int] where `bid_values[b]` is the value of bid `b`.",
+    "`bid_items`: List[List[int]] where `bid_items[b]` lists the requested 1-based item ids for bid `b`.",
+    "`reserve_values`: List[int] of length `n_items`, where `reserve_values[i]` is the reserve value of keeping item `i+1` for internal use.",
+    "`ref_opt_val`: Optional integer reference optimum for `total_value`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`selected_bids`: List[int] of accepted bid indices.",
+      "example": "[1, 4]",
+      "type": "List[int]",
+      "size": "[k]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`reserved_items`: List[int] of reserved item ids kept for internal use.",
+      "example": "[2, 5]",
+      "type": "List[int]",
+      "size": "[m]",
+      "index": "1-based item ids"
+    },
+    "var3": {
+      "descr": "`revenue`: Integer total value collected from accepted bids.",
+      "example": "95",
+      "type": "int"
+    },
+    "var4": {
+      "descr": "`reserved_value`: Integer total reserve value collected from reserved items.",
+      "example": "40",
+      "type": "int"
+    },
+    "var5": {
+      "descr": "`total_value`: Integer objective value equal to bid revenue plus reserved-item value.",
+      "example": "135",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "This CR adds a new reservation decision layer over individual items and changes the objective from maximizing bid revenue alone to maximizing the combined value of bids and retained items. The per-item exclusivity logic must now coordinate bid acceptance with direct item reservation.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "modify"
+    },
+    "base_model": {
+      "decision_variable_count": 7,
+      "constraint_count": 6
+    },
+    "cr_impact": {
+      "affected_decision_variables": 11,
+      "affected_constraints": 7,
+      "notes": "The CR adds an item-level reservation vector `r` of length `5` alongside the existing bid-selection vector `x` of length `6`. The 5 per-item compatibility constraints are modified to include reservation decisions, and 2 new equalities compute `reserved_value` and `total_value`."
+    }
+  }
+}
