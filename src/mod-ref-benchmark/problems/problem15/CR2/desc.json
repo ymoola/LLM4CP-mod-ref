@@ -1,0 +1,52 @@
+{
+  "source": "modref",
+  "name": "Winner Determination Problem - CR2",
+  "content": "Each bid may now be satisfied by one of several admissible bundle variants instead of a single fixed bundle. If a bid is accepted, the model must choose exactly one variant for that bid. The chosen variants across all accepted bids must remain mutually compatible, and the aim remains to maximize total revenue.",
+  "value_info": [
+    "`n_items`: Integer total number of items in the auction; valid item ids are the 1-based integers `{1, ..., n_items}`.",
+    "`bid_values`: List[int] where `bid_values[b]` is the value of bid `b`.",
+    "`bid_items`: List[List[int]] where `bid_items[b]` is the canonical bundle for bid `b`, expressed using 1-based item ids. In this CR instance it is the first listed variant for that bid.",
+    "`bid_variants`: List[List[List[int]]] where `bid_variants[b][v]` is the `v`th admissible bundle variant for bid `b`, expressed using the same 1-based item ids.",
+    "`ref_opt_val`: Optional integer reference optimum for `revenue`; null until filled in."
+  ],
+  "ref_sol_format": {
+    "var1": {
+      "descr": "`selected_bids`: List[int] of accepted bid indices.",
+      "example": "[0, 3]",
+      "type": "List[int]",
+      "size": "[k]",
+      "index": "0-based"
+    },
+    "var2": {
+      "descr": "`chosen_variants`: List[int] of length `n_bids`, where `chosen_variants[b]` is the chosen 0-based variant index for bid `b`, or `-1` if bid `b` is rejected.",
+      "example": "[0, -1, -1, 1]",
+      "type": "List[int]",
+      "size": "[n_bids]",
+      "index": "0-based"
+    },
+    "var3": {
+      "descr": "`revenue`: Integer total value collected from the accepted bids.",
+      "example": "90",
+      "type": "int"
+    }
+  },
+  "prob_type": "cop",
+  "complexity": {
+    "difficulty_label": "high",
+    "difficulty_rationale": "This CR adds a bid-variant selection layer on top of the base winner-determination model. The model must choose both which bids win and which bundle variant each winning bid uses, so feasibility now depends on coordinated bundle choices rather than fixed bid contents.",
+    "change_types": {
+      "constraints": "mixed",
+      "decision_variables": "add",
+      "objective": "none"
+    },
+    "base_model": {
+      "decision_variable_count": 5,
+      "constraint_count": 4
+    },
+    "cr_impact": {
+      "affected_decision_variables": 12,
+      "affected_constraints": 12,
+      "notes": "The CR adds a `y[b,v]` variant-selection matrix of size `4 x 2 = 8` alongside the existing `x` vector of length `4`. It replaces the fixed-bundle item-conflict constraints with 5 item-wise constraints over chosen variants and adds 4 bid-to-variant linking equalities."
+    }
+  }
+}
