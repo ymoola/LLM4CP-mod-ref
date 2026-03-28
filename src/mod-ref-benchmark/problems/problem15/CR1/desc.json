@@ -3,9 +3,9 @@
   "name": "Winner Determination Problem - CR1",
   "content": "Items are now item types with available quantities rather than unique single-copy items. Each bid requests specified quantities of several item types, and a bid may be accepted only if the auction still has enough units available for every requested type. The aim remains to choose accepted bids that maximize total revenue.",
   "value_info": [
-    "`n_items`: Integer number of item types available in the auction.",
+    "`n_items`: Integer number of item types available in the auction; valid item-type ids are the 1-based integers `{1, ..., n_items}`.",
     "`bid_values`: List[int] where `bid_values[b]` is the value of bid `b`.",
-    "`bid_items`: List[List[int]] where `bid_items[b]` lists the 1-based item-type ids requested by bid `b`.",
+    "`bid_items`: List[List[int]] where `bid_items[b]` lists the requested 1-based item-type ids for bid `b`.",
     "`bid_quantities`: List[List[int]] where `bid_quantities[b][k]` is the quantity requested for item type `bid_items[b][k]` in bid `b`.",
     "`item_capacities`: List[int] of length `n_items`, where `item_capacities[i]` is the total available quantity of item type `i+1`.",
     "`ref_opt_val`: Optional integer reference optimum for `revenue`; null until filled in."
