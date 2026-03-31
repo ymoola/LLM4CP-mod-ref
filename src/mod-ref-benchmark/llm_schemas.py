@@ -185,6 +185,24 @@ def build_planner_validator_schema() -> dict[str, Any]:
     }
 
 
+def build_clarification_assessor_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "status": {"type": "string", "enum": ["proceed", "needs_clarification"]},
+            "reason": {"type": "string"},
+            "questions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "maxItems": 3,
+            },
+            "clarified_cr_summary": {"type": "string"},
+        },
+        "required": ["status", "reason", "questions", "clarified_cr_summary"],
+    }
+
+
 def build_validator_schema() -> dict[str, Any]:
     line_range_schema = _line_range_schema()
     return {

@@ -25,6 +25,8 @@ def run_modifier_agent(
     cr_name: str,
     planner_json: str | None = None,
     planner_plan: dict | None = None,
+    clarification_transcript: list[dict] | None = None,
+    clarified_cr_summary: str | None = None,
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_filename: str = "generated_model.py",
@@ -69,6 +71,8 @@ def run_modifier_agent(
         numbered_model=numbered_model,
         previous_code=previous_code,
         error_message=error_message,
+        clarification_transcript=clarification_transcript,
+        clarified_cr_summary=clarified_cr_summary,
     )
 
     if llm_config is None:

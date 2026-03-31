@@ -30,6 +30,29 @@ def strip_complexity_metadata(cr_desc: dict[str, Any]) -> dict[str, Any]:
     return sanitized
 
 
+def render_clarification_context(
+    clarification_transcript: list[dict[str, Any]] | None = None,
+    clarified_cr_summary: str | None = None,
+) -> str:
+    transcript = clarification_transcript or []
+    summary = (clarified_cr_summary or "").strip()
+    if not transcript and not summary:
+        return "No additional clarification context."
+
+    parts: list[str] = []
+    if summary:
+        parts.append(
+            "Authoritative clarified CR interpretation (use this if it conflicts with the raw CR wording):\n"
+            f"{summary}"
+        )
+    if transcript:
+        parts.append(
+            "Clarification transcript between the workflow and the human:\n"
+            f"{json.dumps(transcript, indent=2)}"
+        )
+    return "\n\n".join(parts)
+
+
 def build_parser_prompt(base_nl_description: str, numbered_model: str, schema: dict[str, Any]) -> str:
     schema_text = json.dumps(schema, indent=2)
     return f"""
@@ -62,8 +85,14 @@ def build_planner_prompt(
     schema: dict[str, Any],
     previous_plan: dict[str, Any] | None = None,
     feedback: str | None = None,
+    clarification_transcript: list[dict[str, Any]] | None = None,
+    clarified_cr_summary: str | None = None,
 ) -> str:
     prompt_cr_desc = strip_complexity_metadata(cr_desc)
+    clarification_context = render_clarification_context(
+        clarification_transcript=clarification_transcript,
+        clarified_cr_summary=clarified_cr_summary,
+    )
     prompt = f"""
 You are the Planner agent. Given a change request (CR) and the existing CPMPy model, produce a precise edit plan indicating what needs to change (add/modify constraints or objectives) and where.
 
@@ -80,6 +109,9 @@ Guidelines:
 
 Change Request (CR) JSON:
 {json.dumps(prompt_cr_desc, indent=2)}
+
+Clarification context:
+{clarification_context}
 
 Base problem description (NL):
 {base_nl_description}
@@ -111,8 +143,14 @@ def build_planner_validator_prompt(
     planner_output: dict[str, Any],
     numbered_model: str,
     schema: dict[str, Any],
+    clarification_transcript: list[dict[str, Any]] | None = None,
+    clarified_cr_summary: str | None = None,
 ) -> str:
     prompt_cr_desc = strip_complexity_metadata(cr_desc)
+    clarification_context = render_clarification_context(
+        clarification_transcript=clarification_transcript,
+        clarified_cr_summary=clarified_cr_summary,
+    )
     return f"""
 You are the Planner Validator agent. Review the planner output before any code is generated.
 
@@ -138,6 +176,9 @@ Base problem description:
 Change Request JSON:
 {json.dumps(prompt_cr_desc, indent=2)}
 
+Clarification context:
+{clarification_context}
+
 Parser mapping:
 {json.dumps(parser_mapping, indent=2)}
 
@@ -157,11 +198,17 @@ def build_modifier_prompt(
     numbered_model: str,
     previous_code: str | None,
     error_message: str | None,
+    clarification_transcript: list[dict[str, Any]] | None = None,
+    clarified_cr_summary: str | None = None,
 ) -> str:
     cr_text = cr_desc.get("content", "")
     value_info = cr_desc.get("value_info", [])
     ref_sol_format = cr_desc.get("ref_sol_format", {})
     expected_output_keys = extract_output_keys(ref_sol_format)
+    clarification_context = render_clarification_context(
+        clarification_transcript=clarification_transcript,
+        clarified_cr_summary=clarified_cr_summary,
+    )
 
     prompt = f"""
 You are the Modifier agent. Apply the change request to the CPMPy reference model with minimal edits, following the planner instructions. 
@@ -172,6 +219,9 @@ Base problem description (NL):
 
 Change Request (content):
 {cr_text}
+
+Clarification context:
+{clarification_context}
 
 Parameter description (value_info):
 {json.dumps(value_info, indent=2)}
@@ -238,9 +288,15 @@ def build_validator_prompt(
     numbered_reference: str,
     numbered_generated: str,
     schema: dict[str, Any],
+    clarification_transcript: list[dict[str, Any]] | None = None,
+    clarified_cr_summary: str | None = None,
 ) -> str:
     cr_text = cr_desc.get("content", "")
     expected_output_keys = extract_output_keys(cr_desc.get("ref_sol_format", {}))
+    clarification_context = render_clarification_context(
+        clarification_transcript=clarification_transcript,
+        clarified_cr_summary=clarified_cr_summary,
+    )
     return f"""
 You are the Validator agent. Check whether the generated CPMPy model implements the Change Request (CR) correctly, without breaking existing behavior.
 
@@ -263,6 +319,9 @@ Base problem description (NL):
 Change Request (content):
 {cr_text}
 
+Clarification context:
+{clarification_context}
+
 Parameter description (value_info):
 {json.dumps(cr_desc.get("value_info", []), indent=2)}
 
@@ -280,6 +339,50 @@ Reference CPMPy model (with line numbers):
 
 Generated CPMPy model (with line numbers):
 {numbered_generated}
+"""
+
+
+def build_clarification_assessor_prompt(
+    *,
+    base_nl_description: str,
+    cr_desc: dict[str, Any],
+    parser_mapping: dict[str, Any],
+    schema: dict[str, Any],
+    clarification_transcript: list[dict[str, Any]] | None = None,
+) -> str:
+    prompt_cr_desc = strip_complexity_metadata(cr_desc)
+    transcript = clarification_transcript or []
+    return f"""
+You are the Clarification Assessor agent for a CPMPy change-request workflow.
+
+Your job:
+- Decide whether the Change Request (CR) is clear enough for the Planner agent to proceed safely.
+- Ask clarifying questions only if ambiguity would materially change the model edits.
+- Ask at most 3 concise questions.
+- If prior human answers resolve the ambiguity, do NOT ask the same question again.
+
+Output must follow this JSON schema:
+{json.dumps(schema, indent=2)}
+
+Decision rules:
+- Return status "proceed" when the CR is clear enough to plan safely.
+- Return status "needs_clarification" only when the ambiguity is material to implementation.
+- When status is "needs_clarification", keep clarified_cr_summary empty and provide 1 to 3 concise questions.
+- When status is "proceed", questions must be empty and clarified_cr_summary must provide a short normalized interpretation that downstream agents can treat as authoritative.
+- Do not ask for information already stated in the CR or transcript.
+- Focus only on CR interpretation, not on coding style or solver details.
+
+Base problem description:
+{base_nl_description}
+
+Change Request JSON:
+{json.dumps(prompt_cr_desc, indent=2)}
+
+Parser mapping:
+{json.dumps(parser_mapping, indent=2)}
+
+Clarification transcript so far:
+{json.dumps(transcript, indent=2)}
 """
 
 

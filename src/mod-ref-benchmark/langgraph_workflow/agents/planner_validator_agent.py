@@ -22,6 +22,8 @@ def run_planner_validator_agent(
     cr_name: str,
     planner_output: dict,
     parser_mapping: dict,
+    clarification_transcript: list[dict] | None = None,
+    clarified_cr_summary: str | None = None,
     base_desc_filename: str = "problem_desc.txt",
     base_model_filename: str = "reference_model.py",
     output_path: str | None = None,
@@ -53,6 +55,8 @@ def run_planner_validator_agent(
         planner_output=planner_output,
         numbered_model=numbered_model,
         schema=schema,
+        clarification_transcript=clarification_transcript,
+        clarified_cr_summary=clarified_cr_summary,
     )
 
     if llm_config is None:

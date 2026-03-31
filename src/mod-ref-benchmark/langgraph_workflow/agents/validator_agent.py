@@ -27,6 +27,8 @@ def run_validator_agent(
     output_path: str | None = None,
     llm_config: dict | LLMConfig | None = None,
     model_name: str = DEFAULT_MODEL,
+    clarification_transcript: list[dict] | None = None,
+    clarified_cr_summary: str | None = None,
 ) -> tuple[dict, Path | None]:
     problem_dir = Path(problem_path)
     cr_dir = problem_dir / cr_name
@@ -58,6 +60,8 @@ def run_validator_agent(
         numbered_reference=numbered_reference,
         numbered_generated=numbered_generated,
         schema=schema,
+        clarification_transcript=clarification_transcript,
+        clarified_cr_summary=clarified_cr_summary,
     )
 
     try:
