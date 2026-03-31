@@ -20,7 +20,11 @@ if str(AGENTS_DIR) not in sys.path:
 if str(THIS_DIR) not in sys.path:
     sys.path.insert(0, str(THIS_DIR))
 
-from llm_client import DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
+from llm_client import (
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENAI_REASONING_EFFORT,
+    DEFAULT_OPENROUTER_MODEL,
+)
 from agents.clarification_assessor_agent import run_clarification_assessor_agent
 from agents.executor_agent import run_executor_agent
 from agents.modifier_agent import run_modifier_agent
@@ -653,8 +657,12 @@ def build_llm_config(
 ) -> Dict[str, Any]:
     if provider == "openai" and model_name == "gpt-oss:20b":
         model_name = DEFAULT_OPENAI_MODEL
+    elif provider == "openrouter" and model_name in {"gpt-oss:20b", DEFAULT_OPENAI_MODEL}:
+        model_name = DEFAULT_OPENROUTER_MODEL
     if provider == "openai" and reasoning_effort is None:
         reasoning_effort = DEFAULT_OPENAI_REASONING_EFFORT
+    elif provider != "openai":
+        reasoning_effort = None
     return {
         "provider": provider,
         "model": model_name,
@@ -772,7 +780,7 @@ def main():
     parser.add_argument("--cr", required=True, help="Change request folder name (e.g., CR1)")
     parser.add_argument(
         "--provider",
-        choices=["ollama", "openai"],
+        choices=["ollama", "openai", "openrouter"],
         default="openai",
         help="LLM provider to use for all LLM calls (default: openai).",
     )
@@ -785,12 +793,12 @@ def main():
         "--reasoning-effort",
         choices=["low", "medium", "high"],
         default=DEFAULT_OPENAI_REASONING_EFFORT,
-        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}; ignored by ollama).",
+        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}; ignored by ollama/openrouter).",
     )
     parser.add_argument(
         "--max-output-tokens",
         type=int,
-        help="Optional max output tokens for OpenAI Responses API (ignored by ollama).",
+        help="Optional max output tokens for OpenAI Responses API or OpenRouter chat completions (ignored by ollama).",
     )
     parser.add_argument(
         "--enable-hitl",

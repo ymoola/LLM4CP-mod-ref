@@ -6,11 +6,24 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional
 
 
-LLMProvider = Literal["ollama", "openai"]
+LLMProvider = Literal["ollama", "openai", "openrouter"]
 DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
 DEFAULT_OPENAI_MODEL = "gpt-5.4"
+DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.4"
 DEFAULT_OPENAI_REASONING_EFFORT: Literal["high"] = "high"
+DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
+
+def _maybe_load_dotenv() -> None:
+    try:
+        from dotenv import find_dotenv, load_dotenv
+
+        env_path = find_dotenv(usecwd=True)
+        if env_path:
+            load_dotenv(env_path)
+    except Exception:
+        # Don't fail if python-dotenv isn't available; downstream SDK/client errors are clearer.
+        pass
 
 @dataclass(frozen=True)
 class LLMConfig:
@@ -29,6 +42,8 @@ class LLMConfig:
         if provider == "openai":
             model = model or DEFAULT_OPENAI_MODEL
             reasoning_effort = reasoning_effort or DEFAULT_OPENAI_REASONING_EFFORT
+        elif provider == "openrouter":
+            model = model or DEFAULT_OPENROUTER_MODEL
         else:
             model = model or DEFAULT_OLLAMA_MODEL
 
@@ -54,28 +69,33 @@ class LLMClient:
     def __init__(self, config: LLMConfig):
         self.config = config
         self._provider = config.provider
+        self._openrouter_headers: dict[str, str] = {}
 
         if self._provider == "ollama":
             import ollama  # local dependency
 
             self._ollama = ollama
             self._openai = None
-        elif self._provider == "openai":
-            if not os.environ.get("OPENAI_API_KEY"):
-                try:
-                    from dotenv import find_dotenv, load_dotenv
-
-                    env_path = find_dotenv(usecwd=True)
-                    if env_path:
-                        load_dotenv(env_path)
-                except Exception:
-                    # Don't fail if python-dotenv isn't available; OpenAI SDK will raise a clear error.
-                    pass
+        elif self._provider in {"openai", "openrouter"}:
+            required_key = "OPENAI_API_KEY" if self._provider == "openai" else "OPENROUTER_API_KEY"
+            if not os.environ.get(required_key):
+                _maybe_load_dotenv()
 
             from openai import OpenAI
 
             kwargs: dict[str, Any] = {}
-            if config.base_url:
+            if self._provider == "openrouter":
+                kwargs["api_key"] = os.environ.get(required_key)
+                kwargs["base_url"] = config.base_url or DEFAULT_OPENROUTER_BASE_URL
+                referer = os.environ.get("OPENROUTER_SITE_URL")
+                title = os.environ.get("OPENROUTER_SITE_NAME")
+                if referer:
+                    self._openrouter_headers["HTTP-Referer"] = referer
+                if title:
+                    self._openrouter_headers["X-OpenRouter-Title"] = title
+                if self._openrouter_headers:
+                    kwargs["default_headers"] = self._openrouter_headers
+            elif config.base_url:
                 kwargs["base_url"] = config.base_url
             self._openai = OpenAI(**kwargs)
             self._ollama = None

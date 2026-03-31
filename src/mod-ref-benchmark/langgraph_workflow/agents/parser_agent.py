@@ -9,7 +9,13 @@ MODREF_DIR = THIS_DIR.parent.parent
 if str(MODREF_DIR) not in sys.path:
     sys.path.insert(0, str(MODREF_DIR))
 
-from llm_client import LLMClient, LLMConfig, DEFAULT_OPENAI_MODEL, DEFAULT_OPENAI_REASONING_EFFORT
+from llm_client import (
+    LLMClient,
+    LLMConfig,
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_OPENAI_REASONING_EFFORT,
+    DEFAULT_OPENROUTER_MODEL,
+)
 from llm_prompts import build_parser_prompt, number_code_lines
 from llm_schemas import build_parser_schema
 
@@ -101,7 +107,7 @@ def main():
     )
     parser.add_argument(
         "--provider",
-        choices=["ollama", "openai"],
+        choices=["ollama", "openai", "openrouter"],
         default="ollama",
         help="LLM provider to use (default: ollama).",
     )
@@ -120,6 +126,8 @@ def main():
     model_name = args.model_name
     if args.provider == "openai" and model_name == DEFAULT_MODEL:
         model_name = DEFAULT_OPENAI_MODEL
+    elif args.provider == "openrouter" and model_name == DEFAULT_MODEL:
+        model_name = DEFAULT_OPENROUTER_MODEL
 
     llm_config = {
         "provider": args.provider,

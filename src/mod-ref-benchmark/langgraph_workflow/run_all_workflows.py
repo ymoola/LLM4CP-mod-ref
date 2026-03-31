@@ -31,7 +31,7 @@ def main():
     )
     parser.add_argument(
         "--provider",
-        choices=["ollama", "openai"],
+        choices=["ollama", "openai", "openrouter"],
         default="openai",
         help="LLM provider to use.",
     )
@@ -44,12 +44,12 @@ def main():
         "--reasoning-effort",
         choices=["low", "medium", "high"],
         default=DEFAULT_OPENAI_REASONING_EFFORT,
-        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}).",
+        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}; ignored by ollama/openrouter).",
     )
     parser.add_argument(
         "--max-output-tokens",
         type=int,
-        help="Optional max output tokens for OpenAI.",
+        help="Optional max output tokens for OpenAI or OpenRouter.",
     )
     parser.add_argument(
         "--max-planner-validation-error-loops",

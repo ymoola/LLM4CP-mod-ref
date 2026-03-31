@@ -22,6 +22,7 @@ from llm_client import (
     LLMConfig,
     DEFAULT_OPENAI_MODEL,
     DEFAULT_OPENAI_REASONING_EFFORT,
+    DEFAULT_OPENROUTER_MODEL,
 )  
 from llm_prompts import build_single_shot_prompt, extract_output_keys
 from llm_schemas import build_code_schema
@@ -273,7 +274,7 @@ def run_single_case(
 
 
 def main():
-    parser = argparse.ArgumentParser(description=f"Single-shot baseline runner (OpenAI {DEFAULT_MODEL}).")
+    parser = argparse.ArgumentParser(description="Single-shot baseline runner.")
     parser.add_argument(
         "--problems-root",
         default=str((MODREF_DIR / "problems").resolve()),
@@ -285,20 +286,26 @@ def main():
         help="Output root for baseline results (default: src/mod-ref-benchmark/baseline/results).",
     )
     parser.add_argument(
+        "--provider",
+        choices=["openai", "openrouter"],
+        default="openai",
+        help="LLM provider to use (default: openai).",
+    )
+    parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        help=f"OpenAI model name (default: {DEFAULT_MODEL}).",
+        help=f"Model name (default: {DEFAULT_MODEL} for OpenAI, {DEFAULT_OPENROUTER_MODEL} for OpenRouter when switching from the legacy default).",
     )
     parser.add_argument(
         "--reasoning-effort",
         choices=["low", "medium", "high"],
         default=DEFAULT_OPENAI_REASONING_EFFORT,
-        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}).",
+        help=f"OpenAI reasoning effort (default: {DEFAULT_OPENAI_REASONING_EFFORT}; ignored by openrouter).",
     )
     parser.add_argument(
         "--max-output-tokens",
         type=int,
-        help="Optional max output tokens for OpenAI Responses API.",
+        help="Optional max output tokens for OpenAI Responses API or OpenRouter chat completions.",
     )
     parser.add_argument(
         "--timeout",
@@ -321,10 +328,14 @@ def main():
     output_root = Path(args.output_root)
     output_root.mkdir(parents=True, exist_ok=True)
 
+    model_name = args.model
+    if args.provider == "openrouter" and model_name == DEFAULT_MODEL:
+        model_name = DEFAULT_OPENROUTER_MODEL
+
     cfg = LLMConfig(
-        provider="openai",
-        model=args.model,
-        reasoning_effort=args.reasoning_effort,
+        provider=args.provider,
+        model=model_name,
+        reasoning_effort=args.reasoning_effort if args.provider == "openai" else None,
         max_output_tokens=args.max_output_tokens,
     )
     llm = LLMClient(cfg)
