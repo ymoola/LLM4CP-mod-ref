@@ -7,6 +7,7 @@ from typing import Any, Literal, Optional
 
 
 LLMProvider = Literal["ollama", "openai", "openrouter"]
+ReasoningEffort = Literal["none", "minimal", "low", "medium", "high"]
 DEFAULT_OLLAMA_MODEL = "gpt-oss:20b"
 DEFAULT_OPENAI_MODEL = "gpt-5.4"
 DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.4"
@@ -29,7 +30,7 @@ def _maybe_load_dotenv() -> None:
 class LLMConfig:
     provider: LLMProvider
     model: str
-    reasoning_effort: Optional[Literal["low", "medium", "high"]] = None
+    reasoning_effort: Optional[ReasoningEffort] = None
     max_output_tokens: Optional[int] = None
     base_url: Optional[str] = None
 
