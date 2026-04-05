@@ -528,7 +528,10 @@ def route_after_planner_validator(state: WorkflowState) -> str:
     if state.get("planner_validator_status") == "pass":
         return "modifier"
     if int(state.get("planner_validation_error_count", 0) or 0) >= _max_planner_validation_error_loops(state):
-        return "finalize"
+        print(
+            "[workflow] Planner validator loop limit reached; proceeding to modifier with the latest plan."
+        )
+        return "modifier"
     return "planner"
 
 
@@ -537,6 +540,7 @@ def finalize_node(state: WorkflowState) -> WorkflowState:
     clarification_status = state.get("clarification_status")
     clarification_turn_count = int(state.get("clarification_turn_count", 0) or 0)
     exec_ok = state.get("exec_ok")
+    generated_model_path = state.get("generated_model_path")
     planner_validator_status = state.get("planner_validator_status")
     validator_status = state.get("validator_status")
     planner_validation_error_count = int(state.get("planner_validation_error_count", 0) or 0)
@@ -549,16 +553,17 @@ def finalize_node(state: WorkflowState) -> WorkflowState:
 
     if clarification_status == "needs_clarification" and clarification_turn_count >= max_clarification_turns:
         reason = "max_clarification_turns_reached"
-    elif (
-        planner_validator_status
-        and planner_validator_status != "pass"
-        and planner_validation_error_count >= max_planner_validation_error_loops
-    ):
-        reason = "max_planner_validation_error_loops_reached"
     elif exec_ok is False and exec_error_count >= max_exec_error_loops:
         reason = "max_exec_error_loops_reached"
     elif validator_status and validator_status != "pass" and validation_error_count >= max_validation_error_loops:
         reason = "max_validation_error_loops_reached"
+    elif (
+        planner_validator_status
+        and planner_validator_status != "pass"
+        and planner_validation_error_count >= max_planner_validation_error_loops
+        and not generated_model_path
+    ):
+        reason = "max_planner_validation_error_loops_reached"
     else:
         reason = "terminated"
 
@@ -622,7 +627,7 @@ def build_graph(*, hitl_enabled: bool = False, checkpointer: Any | None = None):
     graph.add_conditional_edges(
         "planner_validator",
         route_after_planner_validator,
-        {"planner": "planner", "modifier": "modifier", "finalize": "finalize"},
+        {"planner": "planner", "modifier": "modifier"},
     )
     graph.add_edge("modifier", "executor")
     graph.add_conditional_edges(
