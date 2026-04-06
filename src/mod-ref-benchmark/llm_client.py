@@ -13,6 +13,11 @@ DEFAULT_OPENAI_MODEL = "gpt-5.4"
 DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.4"
 DEFAULT_OPENAI_REASONING_EFFORT: Literal["high"] = "high"
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+JSON_RETRY_INSTRUCTION = (
+    "\n\nIMPORTANT RETRY: Your previous reply was malformed JSON. "
+    "Return only valid JSON that matches the requested schema. "
+    "Do not include markdown fences, comments, or extra text."
+)
 
 
 def _maybe_load_dotenv() -> None:
@@ -139,25 +144,31 @@ class LLMClient:
     ) -> dict[str, Any]:
         """Return a parsed JSON object; provider enforces JSON/schema when supported."""
         if self._provider == "ollama":
-            messages = []
-            if system:
-                messages.append({"role": "system", "content": system})
-            messages.append({"role": "user", "content": prompt})
+            retry_prompt = prompt
+            for attempt in range(2):
+                messages = []
+                if system:
+                    messages.append({"role": "system", "content": system})
+                messages.append({"role": "user", "content": retry_prompt})
 
-            resp = self._ollama.chat(
-                model=self.config.model,
-                messages=messages,
-                format=schema,
-            )
-            raw = resp["message"]["content"]
-            try:
-                return json.loads(raw)
-            except json.JSONDecodeError as exc:
-                raise ValueError(f"LLM returned invalid JSON: {exc}. Raw content: {raw[:500]}") from exc
+                resp = self._ollama.chat(
+                    model=self.config.model,
+                    messages=messages,
+                    format=schema,
+                )
+                raw = resp["message"]["content"]
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    if attempt == 0:
+                        retry_prompt = prompt + JSON_RETRY_INSTRUCTION
+                        continue
+                    raise ValueError(
+                        f"LLM returned invalid JSON: {exc}. Raw content: {raw[:500]}"
+                    ) from exc
 
         params: dict[str, Any] = {
             "model": self.config.model,
-            "input": prompt,
             "text": {
                 "format": {
                     "type": "json_schema",
@@ -174,9 +185,15 @@ class LLMClient:
         if self.config.max_output_tokens is not None:
             params["max_output_tokens"] = int(self.config.max_output_tokens)
 
-        resp = self._openai.responses.create(**params)
-        raw = getattr(resp, "output_text", "") or ""
-        try:
-            return json.loads(raw)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"LLM returned invalid JSON: {exc}. Raw content: {raw[:500]}") from exc
+        retry_prompt = prompt
+        for attempt in range(2):
+            params["input"] = retry_prompt
+            resp = self._openai.responses.create(**params)
+            raw = getattr(resp, "output_text", "") or ""
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError as exc:
+                if attempt == 0:
+                    retry_prompt = prompt + JSON_RETRY_INSTRUCTION
+                    continue
+                raise ValueError(f"LLM returned invalid JSON: {exc}. Raw content: {raw[:500]}") from exc
