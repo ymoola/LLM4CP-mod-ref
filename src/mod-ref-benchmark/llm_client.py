@@ -18,6 +18,13 @@ JSON_RETRY_INSTRUCTION = (
     "Return only valid JSON that matches the requested schema. "
     "Do not include markdown fences, comments, or extra text."
 )
+CLAUDE_46_MODELS = {"anthropic/claude-opus-4.6", "anthropic/claude-sonnet-4.6"}
+VERBOSITY_BY_REASONING_EFFORT = {
+    "minimal": "low",
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+}
 
 
 def _maybe_load_dotenv() -> None:
@@ -108,6 +115,24 @@ class LLMClient:
         else:
             raise ValueError(f"Unsupported provider: {self._provider}")
 
+    def _apply_reasoning_options(self, params: dict[str, Any]) -> None:
+        effort = self.config.reasoning_effort
+        if not effort:
+            return
+
+        if self._provider == "openrouter" and self.config.model in CLAUDE_46_MODELS:
+            if effort == "none":
+                return
+            params["reasoning"] = {"enabled": True}
+            verbosity = VERBOSITY_BY_REASONING_EFFORT.get(effort)
+            if verbosity:
+                extra_body = dict(params.get("extra_body") or {})
+                extra_body["verbosity"] = verbosity
+                params["extra_body"] = extra_body
+            return
+
+        params["reasoning"] = {"effort": effort}
+
     def generate_text(self, *, prompt: str, system: str | None = None) -> str:
         """Return assistant text (no schema enforcement)."""
         if self._provider == "ollama":
@@ -125,8 +150,7 @@ class LLMClient:
         }
         if system:
             params["instructions"] = system
-        if self.config.reasoning_effort:
-            params["reasoning"] = {"effort": self.config.reasoning_effort}
+        self._apply_reasoning_options(params)
         if self.config.max_output_tokens is not None:
             params["max_output_tokens"] = int(self.config.max_output_tokens)
 
@@ -180,8 +204,7 @@ class LLMClient:
         }
         if system:
             params["instructions"] = system
-        if self.config.reasoning_effort:
-            params["reasoning"] = {"effort": self.config.reasoning_effort}
+        self._apply_reasoning_options(params)
         if self.config.max_output_tokens is not None:
             params["max_output_tokens"] = int(self.config.max_output_tokens)
 

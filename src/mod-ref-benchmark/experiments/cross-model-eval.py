@@ -57,6 +57,14 @@ MODEL_PRESETS: list[dict[str, Any]] = [
         "docs_url": None,
     },
     {
+        "key": "openrouter_claude_opus_4_6_high_reasoning",
+        "label": "OpenRouter Claude Opus 4.6 (high reasoning)",
+        "provider": "openrouter",
+        "model": "anthropic/claude-opus-4.6",
+        "reasoning_effort": "high",
+        "docs_url": "https://openrouter.ai/anthropic/claude-opus-4.6/api",
+    },
+    {
         "key": "openrouter_qwen3_5_9b_reasoning_off",
         "label": "OpenRouter Qwen3.5 9B (reasoning off)",
         "provider": "openrouter",
