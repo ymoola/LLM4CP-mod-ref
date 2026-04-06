@@ -247,8 +247,10 @@ Reference CPMPy model with line numbers:
 Requirements:
 - Implement the planner steps (add/modify constraints/objective) precisely; prefer editing the pointed line ranges or inserting after suggested lines.
 - Keep all other constraints and structure intact.
-- Load all numeric parameters from 'input_data.json' at runtime using the names from value_info; never hard-code instance data.
-- Do NOT add hardcoded solve limits (e.g., model.solve(time_limit=...)) unless the CR explicitly requests runtime limiting; otherwise use plain model.solve().
+- Load all numeric parameters from 'input_data.json' at runtime using the names from value_info; never hard-code instance data - all data needed is in input_data.json.
+    - with open('input_data.json', 'r') as f:
+        input_data = json.load(f)
+- Use a solver time limit when solving: prefer `model.solve(time_limit=30)` instead of plain `model.solve()` unless the CR explicitly requires a different runtime policy.
 - Respect ref_sol_format variable names when printing the solution dictionary; avoid placeholder keys like 'var1'.
 - Output valid Python CPMPy code only; no markdown, no extra text. The final line must print the JSON.
 - If the planner suggests a new objective, set it; otherwise keep existing objective semantics unchanged.
@@ -310,7 +312,9 @@ Guidelines:
 - Flag only issues related to the CR or regressions to existing constraints/objective/output format.
 - If everything aligns, return status "pass" and leave issues empty.
 - If changes are needed, set status "needs_changes" and list concise issues with suggested fixes.
-- Be strict about loading data (no hard-coded instance values) and respecting ref_sol_format variable names.
+- Be strict about loading data (no hard-coded instance values) and respecting ref_sol_format variable names. 
+- Model should load all numeric parameters from 'input_data.json'. Make sure it is loading the data from this file.
+    - Make sure the generated file actually opens and reads from 'input_data.json' using json.load, and does not hard-code any instance data.
 - If you cannot localize an issue to exact lines, set generated_lines/reference_lines to null.
 
 Base problem description (NL):
