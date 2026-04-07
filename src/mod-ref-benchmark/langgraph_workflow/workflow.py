@@ -84,6 +84,8 @@ class WorkflowState(TypedDict, total=False):
     executor_timeout: Optional[int]
     hitl_enabled: bool
     thread_id: str
+    enable_planner_validator: bool
+    enable_final_validator: bool
 
 
 def _default_run_output_dir(problem_path: str, cr: str) -> Path:
@@ -123,6 +125,18 @@ def _max_clarification_turns(state: WorkflowState) -> int:
     if state.get("max_clarification_turns") is not None:
         return int(state["max_clarification_turns"])
     return 2
+
+
+def _planner_validator_enabled(state: WorkflowState) -> bool:
+    if state.get("enable_planner_validator") is not None:
+        return bool(state["enable_planner_validator"])
+    return True
+
+
+def _final_validator_enabled(state: WorkflowState) -> bool:
+    if state.get("enable_final_validator") is not None:
+        return bool(state["enable_final_validator"])
+    return True
 
 
 def _is_unit_test_pass(verify_result: Any) -> bool:
@@ -498,6 +512,12 @@ def route_after_parser(state: WorkflowState) -> str:
     return "planner"
 
 
+def route_after_planner(state: WorkflowState) -> str:
+    if _planner_validator_enabled(state):
+        return "planner_validator"
+    return "modifier"
+
+
 def route_after_clarification_assessor(state: WorkflowState) -> str:
     if state.get("clarification_status") == "proceed":
         return "planner"
@@ -508,6 +528,8 @@ def route_after_clarification_assessor(state: WorkflowState) -> str:
 
 def route_after_executor(state: WorkflowState) -> str:
     if state.get("exec_ok"):
+        if not _final_validator_enabled(state):
+            return "unit_test"
         return "validator"
     if int(state.get("exec_error_count", 0) or 0) >= _max_exec_error_loops(state):
         return "finalize"
@@ -572,7 +594,15 @@ def finalize_node(state: WorkflowState) -> WorkflowState:
     if not state.get("exec_error") and reason in {"max_exec_error_loops_reached", "max_validation_error_loops_reached"}:
         updates["exec_error"] = f"Workflow stopped: {reason}"
 
-    if state.get("planner_validator_status") is None:
+    if not _planner_validator_enabled(state):
+        updates["planner_validator_status"] = "skipped"
+        updates["planner_validator_output"] = {
+            "status": "skipped",
+            "summary": "Planner validator disabled for this workflow run.",
+            "issues": [],
+            "notes_for_planner": "",
+        }
+    elif state.get("planner_validator_status") is None:
         updates["planner_validator_status"] = "skipped"
         updates["planner_validator_output"] = {
             "status": "needs_changes",
@@ -581,7 +611,15 @@ def finalize_node(state: WorkflowState) -> WorkflowState:
             "notes_for_planner": "",
         }
 
-    if state.get("validator_status") is None:
+    if not _final_validator_enabled(state):
+        updates["validator_status"] = "skipped"
+        updates["validator_output"] = {
+            "status": "skipped",
+            "summary": "Final validator disabled for this workflow run.",
+            "issues": [],
+            "notes_for_modifier": "",
+        }
+    elif state.get("validator_status") is None:
         updates["validator_status"] = "skipped"
         updates["validator_output"] = {
             "status": "needs_changes",
@@ -623,7 +661,11 @@ def build_graph(*, hitl_enabled: bool = False, checkpointer: Any | None = None):
         },
     )
     graph.add_edge("human_clarification", "clarification_assessor")
-    graph.add_edge("planner", "planner_validator")
+    graph.add_conditional_edges(
+        "planner",
+        route_after_planner,
+        {"planner_validator": "planner_validator", "modifier": "modifier"},
+    )
     graph.add_conditional_edges(
         "planner_validator",
         route_after_planner_validator,
@@ -633,7 +675,12 @@ def build_graph(*, hitl_enabled: bool = False, checkpointer: Any | None = None):
     graph.add_conditional_edges(
         "executor",
         route_after_executor,
-        {"modifier": "modifier", "validator": "validator", "finalize": "finalize"},
+        {
+            "modifier": "modifier",
+            "validator": "validator",
+            "unit_test": "unit_test",
+            "finalize": "finalize",
+        },
     )
     graph.add_conditional_edges(
         "validator",
@@ -691,6 +738,8 @@ def run_workflow_once(
     thread_id: str | None = None,
     checkpointer: Any | None = None,
     human_input_func: Callable[[str], str] | None = None,
+    enable_planner_validator: bool = True,
+    enable_final_validator: bool = True,
 ) -> tuple[WorkflowState, Dict[str, Any], Path]:
     graph = build_graph(hitl_enabled=hitl_enabled, checkpointer=checkpointer)
 
@@ -729,6 +778,8 @@ def run_workflow_once(
         "executor_timeout": timeout_value,
         "hitl_enabled": hitl_enabled,
         "thread_id": resolved_thread_id,
+        "enable_planner_validator": enable_planner_validator,
+        "enable_final_validator": enable_final_validator,
     }
 
     result = _invoke_with_optional_hitl(
@@ -739,11 +790,30 @@ def run_workflow_once(
         human_input_func=input_func,
     )
 
+    if not enable_planner_validator and result.get("planner_validator_status") is None:
+        result["planner_validator_status"] = "skipped"
+        result["planner_validator_output"] = {
+            "status": "skipped",
+            "summary": "Planner validator disabled for this workflow run.",
+            "issues": [],
+            "notes_for_planner": "",
+        }
+    if not enable_final_validator and result.get("validator_status") is None:
+        result["validator_status"] = "skipped"
+        result["validator_output"] = {
+            "status": "skipped",
+            "summary": "Final validator disabled for this workflow run.",
+            "issues": [],
+            "notes_for_modifier": "",
+        }
+
     run_log = {
         "problem": result.get("problem"),
         "cr": result.get("cr"),
         "llm_config": llm_config,
         "hitl_enabled": hitl_enabled,
+        "enable_planner_validator": enable_planner_validator,
+        "enable_final_validator": enable_final_validator,
         "thread_id": resolved_thread_id or None,
         "max_clarification_turns": max_clarification_turns,
         "max_planner_validation_error_loops": max_planner_validation_error_loops,
@@ -844,6 +914,16 @@ def main():
         default=30,
         help="Per execution timeout in seconds for generated models (0 disables timeout).",
     )
+    parser.add_argument(
+        "--disable-planner-validator",
+        action="store_true",
+        help="Skip the planner validator stage and send planner output directly to the modifier.",
+    )
+    parser.add_argument(
+        "--disable-final-validator",
+        action="store_true",
+        help="Skip the final validator stage and run the unit test immediately after a successful execution.",
+    )
 
     args = parser.parse_args()
 
@@ -865,6 +945,8 @@ def main():
         hitl_enabled=args.enable_hitl,
         max_clarification_turns=args.max_clarification_turns,
         thread_id=args.thread_id,
+        enable_planner_validator=not args.disable_planner_validator,
+        enable_final_validator=not args.disable_final_validator,
     )
 
     print(json.dumps(run_log, indent=2))

@@ -5,13 +5,14 @@ import datetime
 import json
 import shutil
 import sys
+import time
 import traceback
 from pathlib import Path
 from typing import Any
 
-
 THIS_DIR = Path(__file__).resolve().parent
-MODREF_DIR = THIS_DIR.parent
+EXPERIMENTS_DIR = THIS_DIR.parent
+MODREF_DIR = EXPERIMENTS_DIR.parent
 WORKFLOW_DIR = MODREF_DIR / "langgraph_workflow"
 
 if str(MODREF_DIR) not in sys.path:
@@ -20,7 +21,10 @@ if str(WORKFLOW_DIR) not in sys.path:
     sys.path.insert(0, str(WORKFLOW_DIR))
 
 from langgraph_workflow.workflow import run_workflow_once  # noqa: E402
-from model_presets import select_model_presets  # noqa: E402
+from model_presets import get_model_preset_by_key  # noqa: E402
+from variant_presets import select_ablation_variants  # noqa: E402
+
+DEFAULT_ABLATION_MODEL_KEY = "openrouter_gpt_5_4_mini"
 
 
 def _ignore_copy(_: str, names: list[str]) -> set[str]:
@@ -64,12 +68,30 @@ def _build_llm_config(preset: dict[str, Any], max_output_tokens: int | None) -> 
     }
 
 
+def _resolve_variant_config(variant: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    loop_overrides = dict(variant.get("loop_overrides") or {})
+    return {
+        "enable_planner_validator": variant["enable_planner_validator"],
+        "enable_final_validator": variant["enable_final_validator"],
+        "max_planner_validation_error_loops": loop_overrides.get(
+            "max_planner_validation_error_loops", args.max_planner_validation_error_loops
+        ),
+        "max_exec_error_loops": loop_overrides.get("max_exec_error_loops", args.max_exec_error_loops),
+        "max_validation_error_loops": loop_overrides.get(
+            "max_validation_error_loops", args.max_validation_error_loops
+        ),
+    }
+
+
 def _summarize_case(
     *,
     preset: dict[str, Any],
+    variant: dict[str, Any],
+    effective_config: dict[str, Any],
     problem_name: str,
     cr_name: str,
     case_dir: Path,
+    elapsed_seconds: float,
     result: dict[str, Any] | None,
     run_log: dict[str, Any] | None,
     log_path: Path | None,
@@ -81,8 +103,13 @@ def _summarize_case(
         "provider": preset["provider"],
         "model": preset["model"],
         "reasoning_effort": preset.get("reasoning_effort"),
+        "variant_key": variant["key"],
+        "variant_label": variant["label"],
+        "variant_description": variant["description"],
+        "effective_variant_config": effective_config,
         "problem": problem_name,
         "cr": cr_name,
+        "runtime_seconds": round(elapsed_seconds, 6),
         "case_dir": str(case_dir.resolve()),
         "workspace_problem_path": str((case_dir / "workspace" / problem_name).resolve()),
         "docs_url": preset.get("docs_url"),
@@ -107,7 +134,9 @@ def _summarize_case(
             "validator_status": (result or {}).get("validator_status"),
             "termination_reason": (result or {}).get("termination_reason"),
             "loop_count": (result or {}).get("loop_count"),
-            "clarification_turn_count": (result or {}).get("clarification_turn_count"),
+            "planner_validation_error_count": (result or {}).get("planner_validation_error_count"),
+            "exec_error_count": (result or {}).get("exec_error_count"),
+            "validation_error_count": (result or {}).get("validation_error_count"),
             "exec_error": (result or {}).get("exec_error"),
             "unit_test_result_path": (result or {}).get("unit_test_result_path"),
             "workflow_log_path": str(log_path.resolve()) if log_path else None,
@@ -117,9 +146,17 @@ def _summarize_case(
     return summary
 
 
+def _build_counts(results: list[dict[str, Any]]) -> dict[str, int]:
+    return {
+        "total": len(results),
+        "pass": sum(1 for item in results if item.get("status") == "pass"),
+        "fail": sum(1 for item in results if item.get("status") == "fail"),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run the LangGraph workflow across all problems/CRs for a fixed cross-model evaluation set."
+        description="Run LangGraph workflow ablation variants across all problems/CRs for a fixed model."
     )
     parser.add_argument(
         "--problems-root",
@@ -128,8 +165,13 @@ def main() -> None:
     )
     parser.add_argument(
         "--output-root",
-        default=str((THIS_DIR / "cross-model-eval" / "results").resolve()),
-        help="Output root for cross-model evaluation results (default: src/mod-ref-benchmark/experiments/cross-model-eval/results).",
+        default=str((THIS_DIR / "results").resolve()),
+        help="Output root for ablation results (default: src/mod-ref-benchmark/experiments/ablations/results).",
+    )
+    parser.add_argument(
+        "--model-key",
+        default=DEFAULT_ABLATION_MODEL_KEY,
+        help=f"Model preset key to use for the ablation study (default: {DEFAULT_ABLATION_MODEL_KEY}).",
     )
     parser.add_argument(
         "--max-output-tokens",
@@ -139,20 +181,20 @@ def main() -> None:
     parser.add_argument(
         "--max-planner-validation-error-loops",
         type=int,
-        default=5,
-        help="Maximum number of planner-validation retries before failing early.",
+        default=3,
+        help="Baseline planner-validator retry budget for the full workflow (default: 3).",
     )
     parser.add_argument(
         "--max-exec-error-loops",
         type=int,
-        default=5,
-        help="Maximum number of execution-error retries before failing.",
+        default=8,
+        help="Baseline execution-error retry budget for the full workflow (default: 8).",
     )
     parser.add_argument(
         "--max-validation-error-loops",
         type=int,
         default=5,
-        help="Maximum number of validation-error retries before forcing unit test on the current executable model.",
+        help="Baseline final-validator retry budget for the full workflow (default: 5).",
     )
     parser.add_argument(
         "--executor-timeout",
@@ -169,82 +211,114 @@ def main() -> None:
         help="Optional: run only a specific CR folder name (e.g., CR1).",
     )
     parser.add_argument(
-        "--only-model",
+        "--only-variant",
         action="append",
-        help="Optional preset key to run. Repeat to run more than one model.",
+        help="Optional ablation variant key to run. Repeat to run more than one variant.",
     )
     args = parser.parse_args()
 
-    selected_presets = select_model_presets(args.only_model)
+    preset = get_model_preset_by_key(args.model_key)
+    if preset is None:
+        raise ValueError(f"Unknown model preset key: {args.model_key}")
 
+    selected_variants = select_ablation_variants(args.only_variant)
     problems_root = Path(args.problems_root).resolve()
     output_root = Path(args.output_root).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
 
-    eval_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    eval_root = output_root / eval_timestamp
-    eval_root.mkdir(parents=True, exist_ok=True)
+    experiment_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    experiment_root = output_root / experiment_timestamp
+    experiment_root.mkdir(parents=True, exist_ok=True)
 
     manifest = {
-        "timestamp": eval_timestamp,
+        "timestamp": experiment_timestamp,
         "problems_root": str(problems_root),
-        "output_root": str(eval_root),
+        "output_root": str(experiment_root),
+        "model": preset,
         "hitl_enabled": False,
-        "max_planner_validation_error_loops": args.max_planner_validation_error_loops,
-        "max_exec_error_loops": args.max_exec_error_loops,
-        "max_validation_error_loops": args.max_validation_error_loops,
+        "base_loop_budgets": {
+            "max_planner_validation_error_loops": args.max_planner_validation_error_loops,
+            "max_exec_error_loops": args.max_exec_error_loops,
+            "max_validation_error_loops": args.max_validation_error_loops,
+        },
         "executor_timeout": args.executor_timeout,
         "max_output_tokens": args.max_output_tokens,
-        "selected_models": selected_presets,
+        "variants": [
+            {
+                **variant,
+                "effective_config": _resolve_variant_config(variant, args),
+            }
+            for variant in selected_variants
+        ],
     }
-    (eval_root / "experiment_manifest.json").write_text(json.dumps(manifest, indent=2))
+    (experiment_root / "experiment_manifest.json").write_text(json.dumps(manifest, indent=2))
+
+    llm_config = _build_llm_config(preset, args.max_output_tokens)
+    model_root = experiment_root / preset["key"]
+    model_root.mkdir(parents=True, exist_ok=True)
 
     all_results: list[dict[str, Any]] = []
+    variant_summaries: list[dict[str, Any]] = []
 
-    for preset in selected_presets:
-        preset_dir = eval_root / preset["key"]
-        preset_dir.mkdir(parents=True, exist_ok=True)
-        model_results: list[dict[str, Any]] = []
+    for variant in selected_variants:
+        effective_config = _resolve_variant_config(variant, args)
+        variant_dir = model_root / variant["key"]
+        variant_dir.mkdir(parents=True, exist_ok=True)
+        variant_results: list[dict[str, Any]] = []
 
-        llm_config = _build_llm_config(preset, args.max_output_tokens)
-        print(f"[cross-model-eval] Running preset {preset['key']} -> {preset['model']}", flush=True)
+        print(
+            f"[ablations] Running variant {variant['key']} with model {preset['key']} -> {preset['model']}",
+            flush=True,
+        )
 
         for problem_dir, cr_dir in _iter_cases(problems_root, args.only_problem, args.only_cr):
-            case_dir = preset_dir / problem_dir.name / cr_dir.name
+            case_dir = variant_dir / problem_dir.name / cr_dir.name
             case_dir.mkdir(parents=True, exist_ok=True)
             workspace_problem_dir = _prepare_case_workspace(problem_dir, cr_dir, case_dir / "workspace")
 
             print(
-                f"[cross-model-eval] Running {preset['key']} on {problem_dir.name}/{cr_dir.name} ...",
+                f"[ablations] Running {variant['key']} on {problem_dir.name}/{cr_dir.name} ...",
                 flush=True,
             )
+
+            started = time.perf_counter()
             try:
                 result, run_log, log_path = run_workflow_once(
                     problem_path=str(workspace_problem_dir),
                     cr=cr_dir.name,
                     llm_config=llm_config,
-                    max_planner_validation_error_loops=args.max_planner_validation_error_loops,
-                    max_exec_error_loops=args.max_exec_error_loops,
-                    max_validation_error_loops=args.max_validation_error_loops,
+                    max_planner_validation_error_loops=effective_config["max_planner_validation_error_loops"],
+                    max_exec_error_loops=effective_config["max_exec_error_loops"],
+                    max_validation_error_loops=effective_config["max_validation_error_loops"],
                     executor_timeout=args.executor_timeout,
                     run_output_dir=case_dir,
                     hitl_enabled=False,
+                    enable_planner_validator=effective_config["enable_planner_validator"],
+                    enable_final_validator=effective_config["enable_final_validator"],
                 )
+                elapsed = time.perf_counter() - started
                 case_summary = _summarize_case(
                     preset=preset,
+                    variant=variant,
+                    effective_config=effective_config,
                     problem_name=problem_dir.name,
                     cr_name=cr_dir.name,
                     case_dir=case_dir,
+                    elapsed_seconds=elapsed,
                     result=result,
                     run_log=run_log,
                     log_path=log_path,
                 )
             except Exception as exc:
+                elapsed = time.perf_counter() - started
                 case_summary = _summarize_case(
                     preset=preset,
+                    variant=variant,
+                    effective_config=effective_config,
                     problem_name=problem_dir.name,
                     cr_name=cr_dir.name,
                     case_dir=case_dir,
+                    elapsed_seconds=elapsed,
                     result=None,
                     run_log=None,
                     log_path=None,
@@ -252,48 +326,53 @@ def main() -> None:
                 )
 
             (case_dir / "case_summary.json").write_text(json.dumps(case_summary, indent=2))
-            model_results.append(case_summary)
+            variant_results.append(case_summary)
             all_results.append(case_summary)
 
-        model_summary = {
+        variant_summary = {
             "model_key": preset["key"],
             "model_label": preset["label"],
             "provider": preset["provider"],
             "model": preset["model"],
             "reasoning_effort": preset.get("reasoning_effort"),
-            "docs_url": preset.get("docs_url"),
-            "counts": {
-                "total": len(model_results),
-                "pass": sum(1 for item in model_results if item.get("status") == "pass"),
-                "fail": sum(1 for item in model_results if item.get("status") == "fail"),
-            },
-            "results": model_results,
+            "variant_key": variant["key"],
+            "variant_label": variant["label"],
+            "variant_description": variant["description"],
+            "effective_variant_config": effective_config,
+            "counts": _build_counts(variant_results),
+            "results": variant_results,
         }
-        (preset_dir / "model_summary.json").write_text(json.dumps(model_summary, indent=2))
+        (variant_dir / "variant_summary.json").write_text(json.dumps(variant_summary, indent=2))
+        variant_summaries.append(variant_summary)
 
     overall_summary = {
-        "timestamp": eval_timestamp,
-        "counts": {
-            "total": len(all_results),
-            "pass": sum(1 for item in all_results if item.get("status") == "pass"),
-            "fail": sum(1 for item in all_results if item.get("status") == "fail"),
+        "timestamp": experiment_timestamp,
+        "model": {
+            "key": preset["key"],
+            "label": preset["label"],
+            "provider": preset["provider"],
+            "model": preset["model"],
+            "reasoning_effort": preset.get("reasoning_effort"),
+            "docs_url": preset.get("docs_url"),
         },
-        "selected_models": [
+        "base_loop_budgets": manifest["base_loop_budgets"],
+        "executor_timeout": args.executor_timeout,
+        "counts": _build_counts(all_results),
+        "variants": [
             {
-                "key": preset["key"],
-                "label": preset["label"],
-                "provider": preset["provider"],
-                "model": preset["model"],
-                "reasoning_effort": preset.get("reasoning_effort"),
-                "docs_url": preset.get("docs_url"),
+                "variant_key": summary["variant_key"],
+                "variant_label": summary["variant_label"],
+                "variant_description": summary["variant_description"],
+                "effective_variant_config": summary["effective_variant_config"],
+                "counts": summary["counts"],
             }
-            for preset in selected_presets
+            for summary in variant_summaries
         ],
         "results": all_results,
     }
-    summary_path = eval_root / "cross_model_eval_summary.json"
+    summary_path = experiment_root / "ablation_summary.json"
     summary_path.write_text(json.dumps(overall_summary, indent=2))
-    print(f"[cross-model-eval] Done. Summary saved to {summary_path}", flush=True)
+    print(f"[ablations] Done. Summary saved to {summary_path}", flush=True)
 
 
 if __name__ == "__main__":
