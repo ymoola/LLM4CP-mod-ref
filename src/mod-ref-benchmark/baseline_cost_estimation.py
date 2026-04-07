@@ -109,7 +109,12 @@ def load_case_prompt_info(problem_dir: Path, cr_dir: Path) -> CasePromptInfo:
 
 
 def count_prompt_tokens(*, provider: str, model: str, prompt: str) -> tuple[int, str]:
-    import tiktoken
+    try:
+        import tiktoken
+    except ImportError as exc:
+        raise RuntimeError(
+            "Cost estimation requires the 'tiktoken' package. Install dependencies with `pip install -r requirements.txt`."
+        ) from exc
 
     if provider == "openai":
         try:
@@ -222,7 +227,6 @@ def estimate_baseline_run_cost(
                 "Cost estimates exclude provider-specific hidden reasoning-token charges unless already reflected in published completion pricing.",
             ],
         },
-        "pricing": {key: info.to_dict() for key, info in pricing_by_key.items()},
         "models": [],
         "totals": {},
     }
@@ -242,7 +246,6 @@ def estimate_baseline_run_cost(
     for spec in model_specs:
         model_key = spec["key"]
         pricing = pricing_by_key[model_key]
-        model_case_rows: list[dict[str, Any]] = []
         model_input_tokens = 0
         model_expected_output_tokens = 0
         model_upper_output_tokens = 0
@@ -278,14 +281,6 @@ def estimate_baseline_run_cost(
                 prompt_cache[cache_key] = case_prompt_data
 
             if case_prompt_data["error"]:
-                model_case_rows.append(
-                    {
-                        "problem": case_prompt_data["problem"],
-                        "cr": case_prompt_data["cr"],
-                        "status": "unavailable",
-                        "error": case_prompt_data["error"],
-                    }
-                )
                 model_cost_complete = False
                 continue
 
@@ -323,33 +318,6 @@ def estimate_baseline_run_cost(
             else:
                 model_cost_complete = False
 
-            model_case_rows.append(
-                {
-                    "problem": case_prompt_data["problem"],
-                    "cr": case_prompt_data["cr"],
-                    "status": "estimated" if pricing.available else "tokens_only",
-                    "token_count_method": token_method,
-                    "input_tokens": input_tokens,
-                    "expected_output_tokens": expected_output_tokens,
-                    "upper_output_tokens": upper_output_tokens,
-                    "expected_output_policy": (
-                        "min(heuristic_expected, max_output_tokens)" if max_output_tokens is not None else "heuristic_expected"
-                    ),
-                    "upper_output_policy": (
-                        "max_output_tokens" if max_output_tokens is not None else "heuristic_upper"
-                    ),
-                    "costs": {
-                        "lower": _compact_cost(lower_cost),
-                        "expected": _compact_cost(expected_cost),
-                        "upper": _compact_cost(upper_cost),
-                    },
-                    "pricing_available": pricing.available,
-                    "pricing_note": pricing.note,
-                    "expected_output_keys": case_prompt_data["expected_output_keys"],
-                    "prompt_path_inputs": case_prompt_data["prompt_path_inputs"],
-                }
-            )
-
         if model_cost_complete:
             overall_lower_cost += model_lower_cost
             overall_expected_cost += model_expected_cost
@@ -374,10 +342,7 @@ def estimate_baseline_run_cost(
                 "pricing": pricing.to_dict(),
                 "token_count_methods": sorted(token_methods),
                 "counts": {
-                    "cases": len(model_case_rows),
-                    "estimated_cases": sum(1 for row in model_case_rows if row.get("status") == "estimated"),
-                    "token_only_cases": sum(1 for row in model_case_rows if row.get("status") == "tokens_only"),
-                    "unavailable_cases": sum(1 for row in model_case_rows if row.get("status") == "unavailable"),
+                    "cases": len(cases),
                 },
                 "totals": {
                     "input_tokens": model_input_tokens,
@@ -388,7 +353,6 @@ def estimate_baseline_run_cost(
                     "upper_cost": _compact_cost(model_upper_cost) if model_cost_complete else None,
                     "cost_complete": model_cost_complete,
                 },
-                "cases": model_case_rows,
             }
         )
 

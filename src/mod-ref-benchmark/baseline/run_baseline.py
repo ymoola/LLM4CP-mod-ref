@@ -78,8 +78,7 @@ class CasePaths:
     result_path: Path
 
 
-def prepare_case_dir(*, output_root: Path, problem: str, cr: str, timestamp: str) -> CasePaths:
-    case_dir = output_root / problem / cr / timestamp
+def prepare_case_dir(*, case_dir: Path) -> CasePaths:
     case_dir.mkdir(parents=True, exist_ok=True)
     return CasePaths(
         case_dir=case_dir,
@@ -123,13 +122,12 @@ def run_single_case(
     problem_dir: Path,
     cr_dir: Path,
     llm: LLMClient,
-    output_root: Path,
+    case_root: Path,
     timeout: int | None,
 ) -> dict[str, Any]:
     problem = problem_dir.name
     cr = cr_dir.name
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    paths = prepare_case_dir(output_root=output_root, problem=problem, cr=cr, timestamp=timestamp)
+    paths = prepare_case_dir(case_dir=case_root)
 
     base_dir = problem_dir / "base"
     base_desc_path = base_dir / "problem_desc.txt"
@@ -381,7 +379,7 @@ def run_preset_cases(
     *,
     model_spec: dict[str, Any],
     problems_root: Path,
-    output_root: Path,
+    run_root: Path,
     only_problem: str | None,
     only_cr: str | None,
     max_output_tokens: int | None,
@@ -394,7 +392,7 @@ def run_preset_cases(
         max_output_tokens=max_output_tokens,
     )
     llm = LLMClient(cfg)
-    model_output_root = output_root / model_spec["key"]
+    model_output_root = run_root / model_spec["key"]
     model_output_root.mkdir(parents=True, exist_ok=True)
 
     model_results: list[dict[str, Any]] = []
@@ -405,7 +403,7 @@ def run_preset_cases(
                 problem_dir=problem_dir,
                 cr_dir=cr_dir,
                 llm=llm,
-                output_root=model_output_root,
+                case_root=model_output_root / problem_dir.name / cr_dir.name,
                 timeout=timeout,
             )
             summary = summarize_case(model_spec=model_spec, result=res)
@@ -485,6 +483,10 @@ def main() -> None:
     output_root.mkdir(parents=True, exist_ok=True)
     timeout = int(args.timeout) if args.timeout else None
     run_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    runs_root = output_root / "runs"
+    runs_root.mkdir(parents=True, exist_ok=True)
+    run_root = runs_root / run_timestamp
+    run_root.mkdir(parents=True, exist_ok=True)
 
     if ad_hoc_mode:
         cfg = build_llm_config(
@@ -515,7 +517,7 @@ def main() -> None:
     cost_estimate.update(
         {
             "problems_root": str(problems_root),
-            "output_root": str(output_root),
+            "output_root": str(run_root),
             "selected_models": selected_models,
             "filters": {
                 "only_model": args.only_model or [],
@@ -524,7 +526,7 @@ def main() -> None:
             },
         }
     )
-    estimate_path = output_root / f"baseline_cost_estimate_{run_timestamp}.json"
+    estimate_path = run_root / "cost_estimate.json"
     estimate_path.write_text(json.dumps(cost_estimate, indent=2))
     print_cost_estimate_summary(estimate=cost_estimate, estimate_path=estimate_path)
 
@@ -537,7 +539,7 @@ def main() -> None:
         model_results = run_preset_cases(
             model_spec=model_spec,
             problems_root=problems_root,
-            output_root=output_root,
+            run_root=run_root,
             only_problem=args.only_problem,
             only_cr=args.only_cr,
             max_output_tokens=args.max_output_tokens,
@@ -565,13 +567,13 @@ def main() -> None:
             },
             "results": model_results,
         }
-        model_summary_path = output_root / model_spec["key"] / f"model_summary_{run_timestamp}.json"
+        model_summary_path = run_root / model_spec["key"] / "model_summary.json"
         model_summary_path.write_text(json.dumps(model_summary, indent=2))
 
     overall_summary = {
         "timestamp": run_timestamp,
         "problems_root": str(problems_root),
-        "output_root": str(output_root),
+        "output_root": str(run_root),
         "max_output_tokens": args.max_output_tokens,
         "timeout": timeout,
         "cost_estimate_path": str(estimate_path),
@@ -596,7 +598,7 @@ def main() -> None:
         },
         "results": all_results,
     }
-    summary_path = output_root / f"baseline_experiment_summary_{run_timestamp}.json"
+    summary_path = run_root / "experiment_summary.json"
     summary_path.write_text(json.dumps(overall_summary, indent=2))
     print(f"[baseline] Done. Summary saved to {summary_path}", flush=True)
 
