@@ -19,60 +19,8 @@ if str(MODREF_DIR) not in sys.path:
 if str(WORKFLOW_DIR) not in sys.path:
     sys.path.insert(0, str(WORKFLOW_DIR))
 
-from llm_client import DEFAULT_OPENAI_REASONING_EFFORT  # noqa: E402
-from langgraph_workflow.workflow import run_workflow_once  # noqa: E402          
-
-
-MODEL_PRESETS: list[dict[str, Any]] = [
-    {
-        "key": "openai_gpt_5_4",
-        "label": "OpenAI GPT-5.4",
-        "provider": "openai",
-        "model": "gpt-5.4",
-        "reasoning_effort": DEFAULT_OPENAI_REASONING_EFFORT,
-        "docs_url": "https://platform.openai.com/docs/models/compare",
-    },
-    {
-        "key": "openrouter_qwen3_next_80b_a3b_instruct",
-        "label": "OpenRouter Qwen3-Next 80B A3B Instruct",
-        "provider": "openrouter",
-        "model": "qwen/qwen3-next-80b-a3b-instruct",
-        "reasoning_effort": None,
-        "docs_url": "https://openrouter.ai/qwen/qwen3-next-80b-a3b-instruct/providers",
-    },
-    {
-        "key": "openrouter_qwen3_5_27b_reasoning_off",
-        "label": "OpenRouter Qwen3.5 27B (reasoning off)",
-        "provider": "openrouter",
-        "model": "qwen/qwen3.5-27b",
-        "reasoning_effort": "none",
-        "docs_url": "https://openrouter.ai/compare/qwen/qwen3.5-27b/z-ai/glm-4.7-flash",
-    },
-    {
-        "key": "openrouter_gemini_3_1_flash_lite_preview",
-        "label": "OpenRouter Gemini 3.1 Flash Lite Preview",
-        "provider": "openrouter",
-        "model": "google/gemini-3.1-flash-lite-preview",
-        "reasoning_effort": None,
-        "docs_url": None,
-    },
-    {
-        "key": "openrouter_claude_opus_4_6_high_reasoning",
-        "label": "OpenRouter Claude Opus 4.6 (high reasoning)",
-        "provider": "openrouter",
-        "model": "anthropic/claude-opus-4.6",
-        "reasoning_effort": "high",
-        "docs_url": "https://openrouter.ai/anthropic/claude-opus-4.6/api",
-    },
-    {
-        "key": "openrouter_qwen3_5_9b_reasoning_off",
-        "label": "OpenRouter Qwen3.5 9B (reasoning off)",
-        "provider": "openrouter",
-        "model": "qwen/qwen3.5-9b",
-        "reasoning_effort": "none",
-        "docs_url": "https://openrouter.ai/compare/black-forest-labs/flux.2-max/qwen/qwen3.5-9b",
-    },
-]
+from langgraph_workflow.workflow import run_workflow_once  # noqa: E402
+from model_presets import select_model_presets  # noqa: E402
 
 
 def _ignore_copy(_: str, names: list[str]) -> set[str]:
@@ -227,11 +175,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    selected_presets = [
-        preset for preset in MODEL_PRESETS if not args.only_model or preset["key"] in set(args.only_model)
-    ]
-    if not selected_presets:
-        raise ValueError("No model presets selected. Check --only-model values.")
+    selected_presets = select_model_presets(args.only_model)
 
     problems_root = Path(args.problems_root).resolve()
     output_root = Path(args.output_root).resolve()
