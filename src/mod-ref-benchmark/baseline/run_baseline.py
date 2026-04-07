@@ -17,10 +17,10 @@ MODREF_DIR = THIS_DIR.parent  # src/mod-ref-benchmark
 if str(MODREF_DIR) not in sys.path:
     sys.path.insert(0, str(MODREF_DIR))
 
-from baseline_cost_estimation import estimate_baseline_run_cost, load_case_prompt_info
 from llm_client import LLMClient, LLMConfig
+from llm_prompts import build_single_shot_prompt, extract_output_keys
 from llm_schemas import build_code_schema
-from model_presets import select_model_presets
+from model_presets import get_model_preset_by_key, select_model_presets
 
 
 def load_verify_func(unit_test_path: Path):
@@ -88,6 +88,38 @@ def prepare_case_dir(*, case_dir: Path) -> CasePaths:
         exec_log_path=case_dir / "execution.json",
         unit_test_log_path=case_dir / "unit_test.json",
         result_path=case_dir / "result.json",
+    )
+
+
+@dataclass(frozen=True)
+class CasePromptInfo:
+    problem: str
+    cr: str
+    prompt: str
+    expected_output_keys: list[str]
+
+
+def load_case_prompt_info(problem_dir: Path, cr_dir: Path) -> CasePromptInfo:
+    base_dir = problem_dir / "base"
+    base_desc_path = base_dir / "problem_desc.txt"
+    base_model_path = base_dir / "reference_model.py"
+    cr_desc_path = cr_dir / "desc.json"
+
+    base_nl_description = base_desc_path.read_text()
+    base_reference_code = base_model_path.read_text()
+    cr_desc = json.loads(cr_desc_path.read_text())
+    expected_output_keys = extract_output_keys(cr_desc.get("ref_sol_format", {}))
+    prompt = build_single_shot_prompt(
+        base_nl_description=base_nl_description,
+        base_reference_code=base_reference_code,
+        cr_desc=cr_desc,
+        expected_output_keys=expected_output_keys,
+    )
+    return CasePromptInfo(
+        problem=problem_dir.name,
+        cr=cr_dir.name,
+        prompt=prompt,
+        expected_output_keys=expected_output_keys,
     )
 
 
@@ -283,55 +315,6 @@ def normalize_model_key(provider: str, model: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in f"{provider}_{model}".lower()).strip("_")
 
 
-def print_cost_estimate_summary(*, estimate: dict[str, Any], estimate_path: Path) -> None:
-    totals = estimate.get("totals", {})
-    print(
-        "[baseline] Cost estimate: "
-        f"{totals.get('models', 0)} model(s), "
-        f"{totals.get('selected_cases', 0)} case(s), "
-        f"{totals.get('invocations', 0)} invocation(s).",
-        flush=True,
-    )
-    for model_data in estimate.get("models", []):
-        model_totals = model_data.get("totals", {})
-        model_key = model_data.get("model_key")
-        if model_totals.get("cost_complete"):
-            print(
-                "[baseline]   "
-                f"{model_key}: "
-                f"lower=${model_totals.get('lower_cost'):.6f} | "
-                f"expected=${model_totals.get('expected_cost'):.6f} | "
-                f"upper=${model_totals.get('upper_cost'):.6f}",
-                flush=True,
-            )
-        else:
-            pricing_note = (model_data.get("pricing") or {}).get("note") or "pricing unavailable"
-            print(
-                "[baseline]   "
-                f"{model_key}: pricing unavailable, "
-                f"input_tokens={model_totals.get('input_tokens', 0)}, "
-                f"expected_output_tokens={model_totals.get('expected_output_tokens', 0)} "
-                f"({pricing_note})",
-                flush=True,
-            )
-
-    if totals.get("cost_complete"):
-        print(
-            "[baseline] Overall estimate: "
-            f"lower=${totals.get('lower_cost'):.6f} | "
-            f"expected=${totals.get('expected_cost'):.6f} | "
-            f"upper=${totals.get('upper_cost'):.6f}",
-            flush=True,
-        )
-    else:
-        print(
-            "[baseline] Overall estimate: partial pricing only; "
-            f"unpriced_models={totals.get('unpriced_models', [])}",
-            flush=True,
-        )
-    print(f"[baseline] Cost estimate saved to {estimate_path}", flush=True)
-
-
 def summarize_case(*, model_spec: dict[str, Any], result: dict[str, Any] | None, error: Exception | None = None) -> dict[str, Any]:
     summary = {
         "model_key": model_spec["key"],
@@ -467,11 +450,6 @@ def main() -> None:
         "--only-cr",
         help="Optional: run only a specific CR folder name (e.g., CR1).",
     )
-    parser.add_argument(
-        "--estimate-cost-only",
-        action="store_true",
-        help="Compute and save a pre-run cost estimate, then exit before any model calls.",
-    )
     args = parser.parse_args()
 
     ad_hoc_mode = any(value is not None for value in (args.provider, args.model, args.reasoning_effort))
@@ -489,50 +467,43 @@ def main() -> None:
     run_root.mkdir(parents=True, exist_ok=True)
 
     if ad_hoc_mode:
-        cfg = build_llm_config(
-            provider=args.provider or "openai",
-            model=args.model,
-            reasoning_effort=args.reasoning_effort,
-            max_output_tokens=args.max_output_tokens,
-        )
-        selected_models = [
-            {
-                "key": normalize_model_key(cfg.provider, cfg.model),
-                "label": f"Ad hoc {cfg.provider}:{cfg.model}",
-                "provider": cfg.provider,
-                "model": cfg.model,
-                "reasoning_effort": cfg.reasoning_effort,
-                "docs_url": None,
-            }
-        ]
+        preset = get_model_preset_by_key(args.model) if args.model else None
+        if preset is not None:
+            cfg = build_llm_config(
+                provider=preset["provider"],
+                model=preset["model"],
+                reasoning_effort=args.reasoning_effort or preset.get("reasoning_effort"),
+                max_output_tokens=args.max_output_tokens,
+            )
+            selected_models = [
+                {
+                    "key": preset["key"],
+                    "label": preset["label"],
+                    "provider": cfg.provider,
+                    "model": cfg.model,
+                    "reasoning_effort": cfg.reasoning_effort,
+                    "docs_url": preset.get("docs_url"),
+                }
+            ]
+        else:
+            cfg = build_llm_config(
+                provider=args.provider or "openai",
+                model=args.model,
+                reasoning_effort=args.reasoning_effort,
+                max_output_tokens=args.max_output_tokens,
+            )
+            selected_models = [
+                {
+                    "key": normalize_model_key(cfg.provider, cfg.model),
+                    "label": f"Ad hoc {cfg.provider}:{cfg.model}",
+                    "provider": cfg.provider,
+                    "model": cfg.model,
+                    "reasoning_effort": cfg.reasoning_effort,
+                    "docs_url": None,
+                }
+            ]
     else:
         selected_models = select_model_presets(args.only_model)
-
-    cases = list(iter_cases(problems_root, args.only_problem, args.only_cr))
-    cost_estimate = estimate_baseline_run_cost(
-        cases=cases,
-        model_specs=selected_models,
-        max_output_tokens=args.max_output_tokens,
-    )
-    cost_estimate.update(
-        {
-            "problems_root": str(problems_root),
-            "output_root": str(run_root),
-            "selected_models": selected_models,
-            "filters": {
-                "only_model": args.only_model or [],
-                "only_problem": args.only_problem,
-                "only_cr": args.only_cr,
-            },
-        }
-    )
-    estimate_path = run_root / "cost_estimate.json"
-    estimate_path.write_text(json.dumps(cost_estimate, indent=2))
-    print_cost_estimate_summary(estimate=cost_estimate, estimate_path=estimate_path)
-
-    if args.estimate_cost_only:
-        print("[baseline] Estimate-only mode enabled; exiting before any model calls.", flush=True)
-        return
 
     all_results: list[dict[str, Any]] = []
     for model_spec in selected_models:
@@ -555,10 +526,6 @@ def main() -> None:
             "model": model_spec["model"],
             "reasoning_effort": model_spec.get("reasoning_effort"),
             "docs_url": model_spec.get("docs_url"),
-            "cost_estimate": next(
-                (model_data.get("totals") for model_data in cost_estimate.get("models", []) if model_data.get("model_key") == model_spec["key"]),
-                None,
-            ),
             "counts": {
                 "total": len(model_results),
                 "pass": sum(1 for item in model_results if item.get("status") == "pass"),
@@ -576,19 +543,6 @@ def main() -> None:
         "output_root": str(run_root),
         "max_output_tokens": args.max_output_tokens,
         "timeout": timeout,
-        "cost_estimate_path": str(estimate_path),
-        "cost_estimate": {
-            "totals": cost_estimate.get("totals", {}),
-            "models": [
-                {
-                    "model_key": model_data.get("model_key"),
-                    "model_label": model_data.get("model_label"),
-                    "totals": model_data.get("totals"),
-                    "pricing": model_data.get("pricing"),
-                }
-                for model_data in cost_estimate.get("models", [])
-            ],
-        },
         "selected_models": selected_models,
         "counts": {
             "total": len(all_results),

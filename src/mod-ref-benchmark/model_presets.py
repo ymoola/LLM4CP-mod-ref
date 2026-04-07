@@ -21,6 +21,20 @@ MODEL_PRESETS: list[dict[str, Any]] = [
         },
     },
     {
+        "key": "openrouter_gpt_5_4_mini",
+        "label": "OpenRouter GPT-5.4 mini",
+        "provider": "openrouter",
+        "model": "openai/gpt-5.4-mini",
+        "reasoning_effort": "none",
+        "docs_url": "https://platform.openai.com/docs/models/compare",
+        "pricing_source_url": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+        "pricing_per_million": {
+            "prompt": 0.75,
+            "completion": 4.50,
+            "request": 0.0,
+        },
+    },
+    {
         "key": "openrouter_qwen3_next_80b_a3b_instruct",
         "label": "OpenRouter Qwen3-Next 80B A3B Instruct",
         "provider": "openrouter",
@@ -102,3 +116,10 @@ def select_model_presets(only_keys: list[str] | None = None) -> list[dict[str, A
     if missing:
         raise ValueError(f"Unknown model preset keys: {missing}")
     return selected
+
+
+def get_model_preset_by_key(key: str) -> dict[str, Any] | None:
+    for preset in MODEL_PRESETS:
+        if preset["key"] == key:
+            return dict(preset)
+    return None
