@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass
 from typing import Any, Literal, Optional
 
@@ -90,7 +91,7 @@ class LLMClient:
             self._ollama = ollama
             self._openai = None
         elif self._provider in {"openai", "openrouter"}:
-            required_key = "OPENAI_API_KEY" if self._provider == "openai" else "OPENROUTER_API_KEY"
+            required_key = "OPENAI_API_KEY" if self._provider == "openai" else "OPENROUTER_LAB"
             if not os.environ.get(required_key):
                 _maybe_load_dotenv()
 
@@ -115,6 +116,24 @@ class LLMClient:
         else:
             raise ValueError(f"Unsupported provider: {self._provider}")
 
+    def _log_llm_start(self, *, kind: str, prompt: str, system: str | None, schema_name: str | None = None) -> float:
+        total_chars = len(prompt) + len(system or "")
+        extra = f" schema={schema_name}" if schema_name else ""
+        print(f"[llm] -> {kind} {self._provider}/{self.config.model}{extra} chars={total_chars}", flush=True)
+        return time.monotonic()
+
+    def _log_llm_done(self, *, kind: str, started_at: float, output_len: int, schema_name: str | None = None) -> None:
+        elapsed = time.monotonic() - started_at
+        extra = f" schema={schema_name}" if schema_name else ""
+        print(
+            f"[llm] <- {kind} {self._provider}/{self.config.model}{extra} {elapsed:.1f}s chars={output_len}",
+            flush=True,
+        )
+
+    def _log_llm_retry(self, *, kind: str, schema_name: str | None = None) -> None:
+        extra = f" schema={schema_name}" if schema_name else ""
+        print(f"[llm] !! retry {kind} {self._provider}/{self.config.model}{extra}", flush=True)
+
     def _apply_reasoning_options(self, params: dict[str, Any]) -> None:
         effort = self.config.reasoning_effort
         if not effort:
@@ -135,13 +154,16 @@ class LLMClient:
 
     def generate_text(self, *, prompt: str, system: str | None = None) -> str:
         """Return assistant text (no schema enforcement)."""
+        started_at = self._log_llm_start(kind="text", prompt=prompt, system=system)
         if self._provider == "ollama":
             full_prompt = prompt if system is None else f"{system}\n\n{prompt}"
             resp = self._ollama.generate(
                 model=self.config.model,
                 prompt=full_prompt,
             )
-            return resp["response"]
+            text = resp["response"]
+            self._log_llm_done(kind="text", started_at=started_at, output_len=len(text))
+            return text
 
         # OpenAI Responses API
         params: dict[str, Any] = {
@@ -156,7 +178,9 @@ class LLMClient:
 
         resp = self._openai.responses.create(**params)
         text = getattr(resp, "output_text", "")
-        return text or ""
+        text = text or ""
+        self._log_llm_done(kind="text", started_at=started_at, output_len=len(text))
+        return text
 
     def generate_json(
         self,
@@ -167,6 +191,7 @@ class LLMClient:
         system: str | None = None,
     ) -> dict[str, Any]:
         """Return a parsed JSON object; provider enforces JSON/schema when supported."""
+        started_at = self._log_llm_start(kind="json", prompt=prompt, system=system, schema_name=schema_name)
         if self._provider == "ollama":
             retry_prompt = prompt
             for attempt in range(2):
@@ -182,9 +207,17 @@ class LLMClient:
                 )
                 raw = resp["message"]["content"]
                 try:
-                    return json.loads(raw)
+                    parsed = json.loads(raw)
+                    self._log_llm_done(
+                        kind="json",
+                        started_at=started_at,
+                        output_len=len(raw),
+                        schema_name=schema_name,
+                    )
+                    return parsed
                 except json.JSONDecodeError as exc:
                     if attempt == 0:
+                        self._log_llm_retry(kind="json", schema_name=schema_name)
                         retry_prompt = prompt + JSON_RETRY_INSTRUCTION
                         continue
                     raise ValueError(
@@ -214,9 +247,17 @@ class LLMClient:
             resp = self._openai.responses.create(**params)
             raw = getattr(resp, "output_text", "") or ""
             try:
-                return json.loads(raw)
+                parsed = json.loads(raw)
+                self._log_llm_done(
+                    kind="json",
+                    started_at=started_at,
+                    output_len=len(raw),
+                    schema_name=schema_name,
+                )
+                return parsed
             except json.JSONDecodeError as exc:
                 if attempt == 0:
+                    self._log_llm_retry(kind="json", schema_name=schema_name)
                     retry_prompt = prompt + JSON_RETRY_INSTRUCTION
                     continue
                 raise ValueError(f"LLM returned invalid JSON: {exc}. Raw content: {raw[:500]}") from exc
