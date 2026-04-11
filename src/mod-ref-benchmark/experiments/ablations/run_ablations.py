@@ -24,7 +24,7 @@ from langgraph_workflow.workflow import run_workflow_once  # noqa: E402
 from model_presets import get_model_preset_by_key  # noqa: E402
 from variant_presets import select_ablation_variants  # noqa: E402
 
-DEFAULT_ABLATION_MODEL_KEY = "openrouter_gpt_5_4_mini"
+DEFAULT_ABLATION_MODEL_KEY = "openrouter_gemini_3_1_flash_lite_preview"
 
 
 def _ignore_copy(_: str, names: list[str]) -> set[str]:
