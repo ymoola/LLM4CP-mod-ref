@@ -14,10 +14,9 @@ def render_change_request(change_request: dict[str, Any]) -> str:
     payload = {
         "what_should_change": change_request.get("what_should_change"),
         "what_must_stay_the_same": change_request.get("what_must_stay_the_same"),
-        "objective_change": change_request.get("objective_change"),
-        "expected_output_changes": change_request.get("expected_output_changes"),
         "additional_detail": change_request.get("additional_detail"),
     }
+    payload = {key: value for key, value in payload.items() if value not in (None, "", [], {})}
     return json.dumps(payload, indent=2)
 
 
@@ -50,9 +49,15 @@ def render_clarification_context(
 ) -> str:
     parts: list[str] = []
     if clarified_summary:
-        parts.append(f"Clarified request summary:\n{clarified_summary}")
+        parts.append(
+            "Authoritative clarified CR interpretation (use this if it conflicts with the raw CR wording):\n"
+            f"{clarified_summary}"
+        )
     if transcript:
-        parts.append(f"Clarification transcript:\n{json.dumps(transcript, indent=2)}")
+        parts.append(
+            "Clarification transcript between the workflow and the human:\n"
+            f"{json.dumps(transcript, indent=2)}"
+        )
     return "\n\n".join(parts) if parts else "No additional clarification context."
 
 
@@ -66,6 +71,8 @@ def render_runtime_input(
     return (
         f"Runtime input source: {source_label}\n"
         f"Runtime input filename: {runtime_input_filename or 'input_data.json'}\n"
+        "This runtime input is shown so you can understand field names, shapes, and expected instance structure. "
+        "Do NOT hard-code these values into the generated model.\n"
         f"Effective runtime input JSON:\n{json.dumps(input_data, indent=2)}"
     )
 
@@ -77,26 +84,35 @@ def build_parser_prompt(
     metadata: dict[str, Any],
     schema: dict[str, Any],
 ) -> str:
+    schema_text = json.dumps(schema, indent=2)
     return f"""
-You are the Parser stage for a CPMpy model-modification workflow.
-Map the uploaded natural-language problem description to the uploaded CPMpy model so later stages know where key semantics live.
+You are the Parser agent for constraint-programming models. Your goal is to align an uploaded natural-language problem description with an existing CPMpy model by pinpointing which sections of code implement each NL statement.
 
-Output must follow this JSON schema:
-{json.dumps(schema, indent=2)}
+Produce a JSON object following this schema (also passed as the structured format):
+{schema_text}
 
-Uploaded problem description:
+Guidelines:
+- Use 1-based line numbers from the numbered model listing below.
+- Keep code excerpts short (just the lines that implement the NL statement).
+- Add brief reasoning and set lower confidence when unsure; never invent code or lines that are not present.
+- If a NL requirement is not represented in the code, put it in 'unmapped_nl'.
+- If code appears without a NL rationale, add it to 'unmapped_model_segments'.
+- Always include the keys 'mappings', 'unmapped_nl', and 'unmapped_model_segments' (use empty arrays if none).
+
+Base problem description (NL):
 {problem_description}
 
-Required metadata:
+Uploaded model metadata:
 {render_metadata(metadata)}
 
-Numbered CPMpy model:
+CPMpy model with line numbers:
 {numbered_model}
 """
 
 
 def build_clarification_assessor_prompt(
     *,
+    problem_description: str,
     change_request: dict[str, Any],
     parser_output: dict[str, Any],
     metadata: dict[str, Any],
@@ -107,35 +123,51 @@ def build_clarification_assessor_prompt(
     transcript: list[dict[str, Any]] | None = None,
 ) -> str:
     return f"""
-Decide whether the user's change request is sufficiently clear to plan safely.
+You are the Clarification Assessor agent for a CPMpy change-request workflow.
+
+Your job:
+- Decide whether the Change Request (CR) is clear enough for the Planner agent to proceed safely.
+- Ask clarifying questions only if ambiguity would materially change the model edits.
+- Ask at most 3 concise questions.
+- If prior human answers resolve the ambiguity, do NOT ask the same question again.
 
 Output must follow this JSON schema:
 {json.dumps(schema, indent=2)}
 
-Change request:
+Decision rules:
+- Return status "proceed" when the CR is clear enough to plan safely.
+- Return status "needs_clarification" only when the ambiguity is material to implementation.
+- When status is "needs_clarification", keep clarified_request_summary empty and provide 1 to 3 concise questions.
+- When status is "proceed", questions must be empty and clarified_request_summary must provide a short normalized interpretation that downstream agents can treat as authoritative.
+- Do not ask for information already stated in the CR or transcript.
+- Focus only on Change Request interpretation, not on coding style or solver details.
+
+Base problem description (NL):
+{problem_description}
+
+Change Request JSON:
 {render_change_request(change_request)}
 
-Uploaded metadata:
+Uploaded model metadata:
 {render_metadata(metadata)}
 
-Parser output:
+Parser mapping:
 {json.dumps(parser_output, indent=2)}
 
 Effective runtime input:
 {render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
 
-Existing clarification transcript:
-{json.dumps(transcript or [], indent=2)}
-
 Input semantics:
 {render_input_semantics(metadata=metadata, change_request=change_request)}
 
-Ask at most 3 clarification questions. Prefer proceeding if the ambiguity is low risk.
+Clarification transcript so far:
+{json.dumps(transcript or [], indent=2)}
 """
 
 
 def build_planner_prompt(
     *,
+    problem_description: str,
     change_request: dict[str, Any],
     metadata: dict[str, Any],
     parser_output: dict[str, Any],
@@ -150,31 +182,41 @@ def build_planner_prompt(
     feedback: str | None = None,
 ) -> str:
     prompt = f"""
-You are the Planner stage for a CPMpy model modification workflow.
-Produce a precise, minimal edit plan for implementing the requested change while preserving unaffected behavior.
+You are the Planner agent. Given a Change Request (CR) and the existing CPMpy model, produce a precise edit plan indicating what needs to change and where.
 
-Output must follow this JSON schema:
+Output must follow this JSON schema (also enforced via structured output):
 {json.dumps(schema, indent=2)}
 
-Change request:
+Guidelines:
+- Use 1-based line numbers from the numbered model listing.
+- Prefer pointing to existing constraints or functions to modify; if adding, suggest a nearby line to insert after.
+- Keep strategy concise but actionable for the Modifier agent (no full code, just how to implement).
+- Do NOT propose changes unrelated to the CR; highlight sections to preserve so the modifier avoids regressions.
+- If confidence is low, note risks.
+- If you cannot confidently point to a location, set target_lines and/or insert_after_line to null rather than guessing.
+
+Base problem description (NL):
+{problem_description}
+
+Change Request JSON:
 {render_change_request(change_request)}
-
-Uploaded metadata:
-{render_metadata(metadata)}
-
-Effective runtime input:
-{render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
-
-Parser output:
-{json.dumps(parser_output, indent=2)}
 
 Clarification context:
 {render_clarification_context(transcript, clarified_summary)}
 
+Uploaded model metadata:
+{render_metadata(metadata)}
+
 Input semantics:
 {render_input_semantics(metadata=metadata, change_request=change_request)}
 
-Numbered base model:
+Effective runtime input:
+{render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
+
+Parser mapping (NL to code):
+{json.dumps(parser_output, indent=2)}
+
+Numbered CPMPy reference model:
 {numbered_model}
 """
     if previous_plan or feedback:
@@ -191,6 +233,7 @@ Planner validator feedback:
 
 def build_planner_validator_prompt(
     *,
+    problem_description: str,
     change_request: dict[str, Any],
     metadata: dict[str, Any],
     parser_output: dict[str, Any],
@@ -204,41 +247,58 @@ def build_planner_validator_prompt(
     clarified_summary: str | None = None,
 ) -> str:
     return f"""
-Review the planner output before code generation.
-Ensure the plan covers the change request, targets plausible locations, and preserves unaffected behavior.
+You are the Planner Validator agent. Review the planner output before any code is generated.
+
+Your job:
+- Check whether the plan fully covers the Change Request (CR).
+- Check whether the target lines are plausible given the parser mapping and base model.
+- Check whether the plan protects unaffected sections instead of proposing unnecessary changes.
+- Do NOT write code and do NOT run code.
 
 Output must follow this JSON schema:
 {json.dumps(schema, indent=2)}
 
-Change request:
+Guidelines:
+- Return status "pass" only if the plan is specific, aligned with the CR, and safe for the modifier to execute.
+- Return status "needs_changes" if the plan is missing a required edit, targets the wrong code, proposes unnecessary edits, or leaves preservation risks.
+- Keep feedback concise and directly actionable for the Planner agent.
+- Use 1-based line numbers when pointing to issues in the base model.
+- If an issue cannot be localized to exact lines, set target_lines to null.
+
+Base problem description (NL):
+{problem_description}
+
+Change Request JSON:
 {render_change_request(change_request)}
-
-Uploaded metadata:
-{render_metadata(metadata)}
-
-Effective runtime input:
-{render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
-
-Parser output:
-{json.dumps(parser_output, indent=2)}
 
 Clarification context:
 {render_clarification_context(transcript, clarified_summary)}
 
+Uploaded model metadata:
+{render_metadata(metadata)}
+
 Input semantics:
 {render_input_semantics(metadata=metadata, change_request=change_request)}
+
+Effective runtime input:
+{render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
+
+Parser mapping:
+{json.dumps(parser_output, indent=2)}
 
 Planner output:
 {json.dumps(planner_output, indent=2)}
 
-Numbered base model:
+Reference model with line numbers:
 {numbered_model}
 """
 
 
 def build_modifier_prompt(
     *,
+    problem_description: str,
     base_model_code: str,
+    numbered_model: str,
     change_request: dict[str, Any],
     metadata: dict[str, Any],
     plan: dict[str, Any],
@@ -251,37 +311,49 @@ def build_modifier_prompt(
     feedback: str | None = None,
 ) -> str:
     prompt = f"""
-You are the Modifier stage for a CPMpy model-modification workflow.
-Modify the uploaded base model to satisfy the change request while preserving unaffected behavior.
+You are the Modifier agent. Apply the Change Request (CR) to the CPMpy reference model with minimal edits, following the planner instructions.
+Preserve existing constraints unless a planner step says to change them. Do not remove functionality unrelated to the CR.
+Only output valid Python CPMpy code NOT SURROUNDED BY MARKDOWN OR BACKTICKS.
 
-Return ONLY a complete Python file. No markdown. No explanation.
+Base problem description (NL):
+{problem_description}
 
-Base model:
-{base_model_code}
-
-Change request:
+Change Request JSON:
 {render_change_request(change_request)}
-
-Uploaded metadata:
-{render_metadata(metadata)}
-
-Effective runtime input:
-{render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
 
 Clarification context:
 {render_clarification_context(clarification_transcript, clarified_summary)}
 
+Uploaded model metadata:
+{render_metadata(metadata)}
+
 Input semantics:
 {render_input_semantics(metadata=metadata, change_request=change_request)}
 
-Planner output:
+Effective runtime input:
+{render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
+
+Planner edit plan (authoritative):
 {json.dumps(plan, indent=2)}
 
-Hard requirements:
+Reference CPMPy model (without line numbers):
+{base_model_code}
+
+Reference CPMPy model with line numbers:
+{numbered_model}
+
+Requirements:
 - Respect this execution contract:
 {execution_contract_text(metadata)}
-- Preserve the key names and assumptions described in the metadata unless the change request explicitly changes them.
+- Preserve the key names and assumptions described in the metadata unless the CR explicitly changes them.
+- Do NOT hard-code instance data, even though effective runtime input is shown above.
 - Make the smallest safe set of edits necessary.
+- Output valid Python CPMpy code only; no markdown, no extra text.
+
+Formatting rules:
+- Output ONLY valid Python CPMpy code.
+- Do NOT include markdown, backticks, or explanations.
+- If comments are needed, include only Python comments.
 """
     if previous_code or feedback:
         prompt += f"""
@@ -297,6 +369,7 @@ Feedback / error to address:
 
 def build_validator_prompt(
     *,
+    problem_description: str,
     base_model_code: str,
     generated_model_code: str,
     change_request: dict[str, Any],
@@ -308,25 +381,38 @@ def build_validator_prompt(
     clarification_transcript: list[dict[str, Any]] | None = None,
     clarified_summary: str | None = None,
 ) -> str:
+    numbered_reference = number_code_lines(base_model_code)
+    numbered_generated = number_code_lines(generated_model_code)
     return f"""
-You are the final semantic validator for a CPMpy model-modification workflow.
-Compare the generated model against the uploaded base model and the structured change request.
-Do not execute code.
+You are the Validator agent. Check whether the generated CPMpy model implements the Change Request (CR) correctly, without breaking existing behavior.
+Do NOT run code. Rely only on the provided source texts.
 
-Output must follow this JSON schema:
+Output must follow this JSON schema (also enforced via structured output):
 {json.dumps(schema, indent=2)}
 
-Base model:
-{base_model_code}
+Guidelines:
+- Use 1-based line numbers from the numbered listings.
+- Flag only issues related to the CR or regressions to existing constraints, objectives, data handling, execution contract, or output interface.
+- If everything aligns, return status "pass" and leave issues empty.
+- If changes are needed, set status "needs_changes" and list concise issues with suggested fixes.
+- Be strict about the execution contract and about preserving the important names described in the metadata.
+- Be strict about data handling: do not approve code that hard-codes instance data when the model should rely on runtime input.
+- If you cannot localize an issue to exact lines, set generated_lines/reference_lines to null.
 
-Generated model:
-{generated_model_code}
+Base problem description (NL):
+{problem_description}
 
-Change request:
+Change Request JSON:
 {render_change_request(change_request)}
 
-Uploaded metadata:
+Clarification context:
+{render_clarification_context(clarification_transcript, clarified_summary)}
+
+Uploaded model metadata:
 {render_metadata(metadata)}
+
+Input semantics:
+{render_input_semantics(metadata=metadata, change_request=change_request)}
 
 Expected execution contract:
 {execution_contract_text(metadata)}
@@ -334,11 +420,9 @@ Expected execution contract:
 Effective runtime input:
 {render_runtime_input(input_data=input_data, runtime_input_source=runtime_input_source, runtime_input_filename=runtime_input_filename)}
 
-Clarification context:
-{render_clarification_context(clarification_transcript, clarified_summary)}
+Reference CPMPy model (with line numbers):
+{numbered_reference}
 
-Input semantics:
-{render_input_semantics(metadata=metadata, change_request=change_request)}
-
-If the generated model appears executable but still has unresolved semantic concerns, return status needs_changes.
+Generated CPMpy model (with line numbers):
+{numbered_generated}
 """
