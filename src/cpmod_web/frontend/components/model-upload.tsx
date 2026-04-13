@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 export function ModelUploadForm({ projectId }: { projectId: string }) {
@@ -46,17 +47,16 @@ export function ModelUploadForm({ projectId }: { projectId: string }) {
       </div>
       <div className="grid gap-2">
         <label className="text-sm font-medium">Execution mode</label>
-        <select
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        <Select
           name="execution_mode"
           value={executionMode}
           onChange={(event) => setExecutionMode(event.target.value as 'script' | 'build_model')}
         >
           <option value="build_model">Module with build_model-style entrypoint</option>
           <option value="script">Standalone script that prints JSON</option>
-        </select>
+        </Select>
         <p className="text-xs text-slate-500">
-          Choose <span className="font-medium">Module with build_model-style entrypoint</span> for thesis-style CPMpy files
+          Choose <span className="font-medium">Module with build_model-style entrypoint</span> for CPMpy files
           that return a model and variables. Choose <span className="font-medium">Standalone script</span> only if the
           file already runs by itself and prints JSON.
         </p>

@@ -9,6 +9,7 @@ import type { ModelPackage, RunCreatePayload } from '@/lib/types';
 import { getDefaultRunConfig, normalizeRunConfig, RunConfigPicker } from '@/components/run-config-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 export function ChangeRequestForm({
@@ -94,11 +95,10 @@ export function ChangeRequestForm({
         }
       }}
     >
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="rounded-[1.5rem] border border-[var(--line)] bg-[rgba(255,252,246,0.78)] p-4 shadow-[var(--shadow)]">
         <div className="grid gap-2">
-          <label className="text-sm font-medium">Base model package</label>
-          <select
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Base model package</label>
+          <Select
             name="model_package_id"
             value={selectedPackageId}
             onChange={(event) => setSelectedPackageId(event.target.value)}
@@ -109,9 +109,9 @@ export function ChangeRequestForm({
                 {formatPackageLabel(pkg)}
               </option>
             ))}
-          </select>
+          </Select>
           {selectedPackage ? (
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-[var(--muted)]">
               This change request and all runs from it will use <span className="font-medium">{formatPackageLabel(selectedPackage)}</span>.
             </p>
           ) : null}
@@ -136,7 +136,7 @@ export function ChangeRequestForm({
       ) : null}
 
       <div className="grid gap-2">
-        <label className="text-sm font-medium">Describe the change that needs to be made</label>
+        <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Describe the change that needs to be made</label>
         <Textarea
           name="what_should_change"
           required
@@ -145,37 +145,37 @@ export function ChangeRequestForm({
       </div>
 
       <div className="grid gap-2">
-        <label className="text-sm font-medium">Anything that must stay the same? (optional)</label>
+        <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Anything that must stay the same? (optional)</label>
         <Textarea
           name="what_must_stay_the_same"
           placeholder="Optional: mention any logic, outputs, or variable names that should remain unchanged."
         />
       </div>
 
-      <details className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <summary className="cursor-pointer text-sm font-medium text-slate-900">Extra context (optional)</summary>
+      <details className="rounded-[1.5rem] border border-[var(--line)] bg-[rgba(255,252,246,0.78)] p-4 shadow-[var(--shadow)]">
+        <summary className="cursor-pointer text-sm font-semibold uppercase tracking-[0.12em] text-[var(--ink)]">Extra context (optional)</summary>
         <div className="mt-4 grid gap-4">
           <div className="grid gap-2">
-            <label className="text-sm font-medium">Additional context for the workflow</label>
+            <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Additional context for the workflow</label>
             <Textarea
               name="additional_detail"
               placeholder="Optional: examples, edge cases, business rules, or anything else helpful."
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm font-medium">Override input_data.json (optional)</label>
+            <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Override input_data.json (optional)</label>
             <Input name="override_input_data_file" type="file" accept=".json,application/json" />
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-[var(--muted)]">
               If provided, this fully replaces the model package input for every run created from this change request.
             </p>
           </div>
           <div className="grid gap-2">
-            <label className="text-sm font-medium">Override input notes (optional)</label>
+            <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Override input notes (optional)</label>
             <Textarea
               name="override_input_value_info"
               placeholder='Only fill this in if the override adds fields, removes fields, renames fields, or changes what they mean. Example: "capacity" is now per-facility, and "facility_limits" is a new list aligned by facility index.'
             />
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-[var(--muted)]">
               Base package input notes still remain the default. These notes only clarify how the override input should be interpreted for this change request.
             </p>
           </div>

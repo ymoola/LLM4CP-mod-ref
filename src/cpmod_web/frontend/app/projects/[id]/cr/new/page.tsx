@@ -11,14 +11,17 @@ export default function NewChangeRequestPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold">New change request</h1>
-      <p className="max-w-2xl text-sm text-slate-600">
+      <div className="page-intro">
+        <p className="eyebrow">Change request drafting</p>
+        <h1 className="text-4xl sm:text-5xl">Describe the modification in plain language</h1>
+        <p>
         Describe the requested change in plain language, then choose which validated base model package it should apply to.
-      </p>
+        </p>
+      </div>
       {validatedPackages.length > 0 ? (
         <ChangeRequestForm projectId={params.id} modelPackages={validatedPackages} />
       ) : (
-        <p className="text-sm text-slate-600">Upload and validate a model package before creating a change request.</p>
+        <p className="text-sm text-[var(--muted)]">Upload and validate a model package before creating a change request.</p>
       )}
     </div>
   );

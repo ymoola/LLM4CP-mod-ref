@@ -50,16 +50,16 @@ function ProviderKeyCard({ provider }: { provider: Provider }) {
   }
 
   return (
-    <Card className="space-y-4">
+    <Card className="space-y-4 rounded-[1.7rem] p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold capitalize">{provider}</h2>
-          <p className="text-sm text-slate-600">Keys are encrypted server-side and are never shown again after save.</p>
+          <p className="text-sm text-[var(--muted)]">Keys are encrypted server-side and are never shown again after save.</p>
         </div>
         <Badge tone={status?.has_key ? 'success' : 'warning'}>{status?.has_key ? 'Key saved' : 'No key saved'}</Badge>
       </div>
       <div className="grid gap-2">
-        <label className="text-sm font-medium">API key</label>
+        <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">API key</label>
         <Input
           type="password"
           value={apiKey}
@@ -67,7 +67,7 @@ function ProviderKeyCard({ provider }: { provider: Provider }) {
           placeholder={status?.has_key ? 'Enter a new key to replace the existing one' : 'Paste your provider API key'}
         />
         {status?.updated_at ? (
-          <p className="text-xs text-slate-500">Last updated {new Date(status.updated_at).toLocaleString()}.</p>
+          <p className="text-xs text-[var(--muted)]">Last updated {new Date(status.updated_at).toLocaleString()}.</p>
         ) : null}
       </div>
       {error ? <p className="text-sm text-rose-700">{error}</p> : null}
@@ -90,9 +90,10 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold">Settings</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+      <div className="page-intro">
+        <p className="eyebrow">Configuration</p>
+        <h1 className="text-4xl sm:text-5xl">Provider keys and launch models</h1>
+        <p>
           Save provider keys once, then reuse them across runs. Model selection stays per run, but only curated models shown below can be launched.
         </p>
       </div>
@@ -104,20 +105,21 @@ export default function SettingsPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-2xl font-semibold">Curated run models</h2>
-          <p className="mt-1 text-sm text-slate-600">These are the preset-specific models the product currently allows for workflow runs.</p>
+          <p className="eyebrow">Model catalog</p>
+          <h2 className="mt-2 text-3xl font-semibold">Curated run models</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">These are the preset-specific models the product currently allows for workflow runs.</p>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           {catalogQuery.data?.map((entry) => (
-            <Card key={entry.id} className="space-y-3">
+            <Card key={entry.id} className="space-y-3 rounded-[1.6rem]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-lg font-semibold">{entry.label}</span>
                 <Badge tone={entry.preset === 'quality' ? 'warning' : 'default'}>{entry.preset}</Badge>
                 <Badge tone="default">{entry.provider}</Badge>
                 {entry.is_default ? <Badge tone="success">Default</Badge> : null}
               </div>
-              <p className="text-sm text-slate-600">{entry.description}</p>
-              <p className="text-xs text-slate-500">Model id: {entry.model_name}</p>
+              <p className="text-sm text-[var(--muted)]">{entry.description}</p>
+              <p className="text-xs text-[var(--muted)]">Model id: {entry.model_name}</p>
             </Card>
           ))}
         </div>

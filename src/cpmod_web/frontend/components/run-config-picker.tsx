@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 
 import type { ModelCatalogEntry, ProviderCredentialStatus, RunCreatePayload } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
 
 function sortEntries(catalog: ModelCatalogEntry[]) {
   return [...catalog].sort((left, right) => {
@@ -77,7 +78,7 @@ export function RunConfigPicker({
   );
 
   if (!selected) {
-    return <p className="text-sm text-slate-600">No curated models are available yet.</p>;
+    return <p className="text-sm text-[var(--muted)]">No curated models are available yet.</p>;
   }
 
   const activeCredential = credentialLookup.get(selected.api_key_provider);
@@ -85,18 +86,17 @@ export function RunConfigPicker({
   const checkingCredentials = credentialStatuses.length === 0;
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div className="space-y-4 rounded-[1.5rem] border border-[var(--line)] bg-[rgba(255,252,246,0.78)] p-4 shadow-[var(--shadow)]">
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">Run model selection</h3>
-        <p className="mt-1 text-xs text-slate-600">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--ink)]">Run model selection</h3>
+        <p className="mt-1 text-xs text-[var(--muted)]">
           Choose a preset first, then pick one curated model inside that preset. The run will use your saved key for the selected provider.
         </p>
       </div>
 
       <div className="grid gap-2">
-        <label className="text-sm font-medium">Preset</label>
-        <select
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Preset</label>
+        <Select
           value={selected.model_preset}
           disabled={disabled}
           onChange={(event) => {
@@ -115,13 +115,12 @@ export function RunConfigPicker({
         >
           <option value="fast">Fast</option>
           <option value="quality">Quality</option>
-        </select>
+        </Select>
       </div>
 
       <div className="grid gap-2">
-        <label className="text-sm font-medium">Model</label>
-        <select
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        <label className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Model</label>
+        <Select
           value={`${selected.model_provider}::${selected.model_name}`}
           disabled={disabled}
           onChange={(event) => {
@@ -142,9 +141,9 @@ export function RunConfigPicker({
               {entry.label} · {entry.provider}
             </option>
           ))}
-        </select>
+        </Select>
         {modelsForPreset.length ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">
+          <div className="rounded-[1.2rem] border border-[var(--line)] bg-[rgba(255,255,255,0.78)] p-3 text-sm text-[var(--ink)]">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">
                 {modelsForPreset.find((entry) => entry.provider === selected.model_provider && entry.model_name === selected.model_name)?.label ?? selected.model_name}
@@ -154,7 +153,7 @@ export function RunConfigPicker({
                 {checkingCredentials ? 'Checking saved key' : hasCredential ? `Saved ${selected.api_key_provider} key` : `Missing ${selected.api_key_provider} key`}
               </Badge>
             </div>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               {modelsForPreset.find((entry) => entry.provider === selected.model_provider && entry.model_name === selected.model_name)?.description}
             </p>
           </div>
