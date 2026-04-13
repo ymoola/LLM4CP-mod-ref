@@ -1,0 +1,1 @@
+Choose an integer x between the provided lower and upper bounds and output it as JSON.

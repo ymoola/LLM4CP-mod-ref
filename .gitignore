@@ -210,3 +210,14 @@ results/
 **/generated_model.py
 src/testing.ipynb
 src/mod-ref-benchmark/llms-full.txt
+thesis/
+
+# cpmod_web frontend
+src/cpmod_web/frontend/node_modules/
+src/cpmod_web/frontend/.next/
+src/cpmod_web/frontend/out/
+src/cpmod_web/frontend/.vercel/
+
+# cpmod_web local env files
+src/cpmod_web/frontend/.env.local
+src/cpmod_web/backend/.env
