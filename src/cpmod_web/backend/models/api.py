@@ -55,10 +55,31 @@ class ChangeRequestRead(BaseModel):
     created_at: datetime | None = None
 
 
+class ModelCatalogEntryRead(BaseModel):
+    id: str
+    preset: Literal['fast', 'quality']
+    provider: Literal['openai', 'openrouter']
+    model_name: str
+    label: str
+    description: str
+    reasoning_effort: Literal['none', 'minimal', 'low', 'medium', 'high'] | None = None
+    max_output_tokens: int | None = None
+    is_default: bool = False
+
+
+class ProviderCredentialStatusRead(BaseModel):
+    provider: Literal['openai', 'openrouter']
+    has_key: bool
+    updated_at: datetime | None = None
+
+
 class RunCreate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     change_request_id: str
     model_preset: Literal['fast', 'quality'] = Field(default='quality', alias='model_config')
+    model_provider: Literal['openai', 'openrouter']
+    model_name: str
+    api_key_provider: Literal['openai', 'openrouter']
 
 
 class ClarificationSubmit(BaseModel):
@@ -88,9 +109,9 @@ class RunEventRead(BaseModel):
 
 
 class RunRead(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
     id: str
     change_request_id: str
+    project_id: str | None = None
     model_package_id: str | None = None
     model_package_filename: str | None = None
     change_request_summary: str | None = None
@@ -98,7 +119,11 @@ class RunRead(BaseModel):
     runtime_input_filename: str | None = None
     runtime_input_file_url: str | None = None
     status: RunStatus
-    model_preset: str = Field(alias='model_config')
+    model_preset: Literal['fast', 'quality']
+    model_provider: Literal['openai', 'openrouter']
+    model_name: str
+    api_key_provider: Literal['openai', 'openrouter']
+    credential_source: Literal['user_saved']
     clarification_questions: list[str] = Field(default_factory=list)
     clarification_answers: list[str] = Field(default_factory=list)
     invariants: dict[str, Any] | None = None
@@ -115,13 +140,34 @@ class RunRead(BaseModel):
 class RunSummaryRead(BaseModel):
     id: str
     change_request_id: str
+    project_id: str | None = None
     model_package_id: str | None = None
     model_package_filename: str | None = None
     change_request_summary: str | None = None
     runtime_input_source: Literal['base', 'change_request_override'] | None = None
     status: RunStatus
-    model_preset: str = Field(alias='model_config')
+    model_preset: Literal['fast', 'quality']
+    model_provider: Literal['openai', 'openrouter']
+    model_name: str
+    api_key_provider: Literal['openai', 'openrouter']
+    credential_source: Literal['user_saved']
     created_at: datetime | None = None
     started_at: datetime | None = None
     completed_at: datetime | None = None
     failure_type: str | None = None
+
+
+class DashboardCountsRead(BaseModel):
+    total_projects: int
+    validated_model_packages: int
+    completed_runs: int
+    runs_needing_review: int
+    failed_runs: int
+
+
+class DashboardOverviewRead(BaseModel):
+    counts: DashboardCountsRead
+    recent_projects: list[ProjectRead] = Field(default_factory=list)
+    recent_runs: list[RunSummaryRead] = Field(default_factory=list)
+    runs_awaiting_clarification: list[RunSummaryRead] = Field(default_factory=list)
+    runs_needing_review: list[RunSummaryRead] = Field(default_factory=list)

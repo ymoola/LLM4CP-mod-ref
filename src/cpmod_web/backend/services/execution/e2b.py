@@ -20,11 +20,36 @@ class E2BExecutionBackend(ExecutionBackend):
         if settings.e2b_template:
             sandbox_kwargs['template'] = settings.e2b_template
 
-        async with AsyncSandbox(**sandbox_kwargs) as sandbox:
+        sandbox = await AsyncSandbox.create(**sandbox_kwargs)
+        async with sandbox:
             files, entry_script = build_execution_files(code=code, input_data=input_data, metadata=metadata)
             for relative_path, content in files.items():
                 await sandbox.files.write(f'/home/user/{relative_path}', content)
-            result = await sandbox.commands.run(f'python /home/user/{entry_script}', timeout=settings.execution_timeout_seconds)
+            install = await sandbox.commands.run(
+                'python -m pip install --quiet cpmpy numpy',
+                timeout=min(max(settings.execution_timeout_seconds * 2, 60), 180),
+            )
+            if install.exit_code != 0:
+                return ExecutionResult(
+                    passed=False,
+                    stdout=install.stdout or '',
+                    stderr=install.stderr or 'Failed to install CPMpy inside the E2B sandbox.',
+                    exit_code=int(install.exit_code),
+                    error_type=FailureType.RUNTIME_ERROR,
+                )
+            try:
+                result = await sandbox.commands.run(f'python /home/user/{entry_script}', timeout=settings.execution_timeout_seconds)
+            except Exception as exc:  # pragma: no cover - network/runtime dependent
+                message = str(exc)
+                error_type = FailureType.TIMEOUT if 'timeout' in message.lower() else FailureType.RUNTIME_ERROR
+                return ExecutionResult(
+                    passed=False,
+                    stdout='',
+                    stderr=message,
+                    exit_code=124 if error_type == FailureType.TIMEOUT else 1,
+                    error_type=error_type,
+                    timeout_seconds=settings.execution_timeout_seconds if error_type == FailureType.TIMEOUT else None,
+                )
             stdout = result.stdout or ''
             stderr = result.stderr or ''
             if result.exit_code != 0:
@@ -33,7 +58,8 @@ class E2BExecutionBackend(ExecutionBackend):
                     stdout=stdout,
                     stderr=stderr,
                     exit_code=int(result.exit_code),
-                    error_type=FailureType.RUNTIME_ERROR,
+                    error_type=FailureType.TIMEOUT if 'timeout' in stderr.lower() else FailureType.RUNTIME_ERROR,
+                    timeout_seconds=settings.execution_timeout_seconds if 'timeout' in stderr.lower() else None,
                 )
             try:
                 parsed = json.loads(stdout)

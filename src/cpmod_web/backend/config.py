@@ -4,7 +4,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_FILE = Path(__file__).resolve().parent / '.env'
@@ -24,12 +23,11 @@ class Settings(BaseSettings):
     supabase_url: str = ''
     supabase_service_role_key: str = ''
     supabase_publishable_key: str = ''
+    credential_encryption_secret: str = ''
 
     models_bucket: str = 'models'
     artifacts_bucket: str = 'artifacts'
 
-    openai_api_key: str | None = None
-    openrouter_api_key: str | None = None
     openrouter_base_url: str = 'https://openrouter.ai/api/v1'
     openrouter_site_url: str | None = None
     openrouter_site_name: str = 'CP Mod Web'
@@ -37,14 +35,6 @@ class Settings(BaseSettings):
     e2b_api_key: str | None = None
     e2b_template: str | None = None
     execution_backend: Literal['auto', 'local', 'e2b'] = 'auto'
-
-    fast_provider: Literal['openai', 'openrouter'] = 'openai'
-    fast_model: str = 'gpt-5.4-mini'
-    fast_reasoning_effort: Literal['none', 'minimal', 'low', 'medium', 'high'] | None = 'none'
-
-    quality_provider: Literal['openai', 'openrouter'] = 'openrouter'
-    quality_model: str = 'anthropic/claude-opus-4.6'
-    quality_reasoning_effort: Literal['none', 'minimal', 'low', 'medium', 'high'] | None = 'high'
 
     max_planner_validation_loops: int = 5
     max_execution_loops: int = 5
@@ -59,6 +49,23 @@ class Settings(BaseSettings):
         if self.execution_backend == 'auto':
             return 'e2b' if self.app_env == 'production' else 'local'
         return self.execution_backend
+
+    def readiness_issues(self) -> list[str]:
+        issues: list[str] = []
+        if not self.supabase_url:
+            issues.append('CPMOD_WEB_SUPABASE_URL is not configured.')
+        if not self.supabase_service_role_key:
+            issues.append('CPMOD_WEB_SUPABASE_SERVICE_ROLE_KEY is not configured.')
+        if not self.credential_encryption_secret:
+            issues.append('CPMOD_WEB_CREDENTIAL_ENCRYPTION_SECRET is not configured.')
+        if self.resolved_execution_backend == 'e2b' and not self.e2b_api_key:
+            issues.append('CPMOD_WEB_E2B_API_KEY is required when the execution backend resolves to E2B.')
+        return issues
+
+    def validate_for_runtime(self) -> None:
+        issues = self.readiness_issues()
+        if self.app_env == 'production' and issues:
+            raise RuntimeError('Invalid production configuration: ' + ' '.join(issues))
 
 
 @lru_cache(maxsize=1)

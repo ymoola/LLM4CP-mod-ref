@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from ..services.dependency_policy import supported_runtime_description
 from ..services.execution.harness import execution_contract_text
 
 
@@ -345,8 +346,10 @@ Reference CPMPy model with line numbers:
 Requirements:
 - Respect this execution contract:
 {execution_contract_text(metadata)}
+- Keep the runtime dependency footprint within {supported_runtime_description()}
 - Preserve the key names and assumptions described in the metadata unless the CR explicitly changes them.
 - Do NOT hard-code instance data, even though effective runtime input is shown above.
+- Do NOT introduce new third-party imports beyond the supported runtime.
 - Make the smallest safe set of edits necessary.
 - Output valid Python CPMpy code only; no markdown, no extra text.
 
@@ -396,6 +399,7 @@ Guidelines:
 - If everything aligns, return status "pass" and leave issues empty.
 - If changes are needed, set status "needs_changes" and list concise issues with suggested fixes.
 - Be strict about the execution contract and about preserving the important names described in the metadata.
+- Be strict about dependency usage: approve only code that stays within {supported_runtime_description()}
 - Be strict about data handling: do not approve code that hard-codes instance data when the model should rely on runtime input.
 - If you cannot localize an issue to exact lines, set generated_lines/reference_lines to null.
 

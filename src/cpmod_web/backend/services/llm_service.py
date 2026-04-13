@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 from openai import OpenAI
 
 from ..config import get_settings
-
-LLMProvider = Literal['openai', 'openrouter']
-ReasoningEffort = Literal['none', 'minimal', 'low', 'medium', 'high']
+from .model_catalog import LLMProvider, ModelPreset, ReasoningEffort, get_catalog_entry
 
 
 @dataclass(frozen=True)
@@ -21,28 +18,27 @@ class ProductLLMConfig:
     max_output_tokens: int | None = None
 
 
-def get_model_config(preset: Literal['fast', 'quality']) -> ProductLLMConfig:
-    settings = get_settings()
-    if preset == 'fast':
-        return ProductLLMConfig(
-            provider=settings.fast_provider,
-            model=settings.fast_model,
-            reasoning_effort=settings.fast_reasoning_effort,
-        )
+def get_model_config(*, preset: ModelPreset, provider: LLMProvider, model_name: str) -> ProductLLMConfig:
+    entry = get_catalog_entry(preset=preset, provider=provider, model_name=model_name)
+    if not entry:
+        raise ValueError(f'Unsupported model selection: preset={preset!r}, provider={provider!r}, model={model_name!r}')
     return ProductLLMConfig(
-        provider=settings.quality_provider,
-        model=settings.quality_model,
-        reasoning_effort=settings.quality_reasoning_effort,
+        provider=entry.provider,
+        model=entry.model,
+        reasoning_effort=entry.reasoning_effort,
+        max_output_tokens=entry.max_output_tokens,
     )
 
 
 class LLMService:
-    def __init__(self, config: ProductLLMConfig):
+    def __init__(self, config: ProductLLMConfig, *, api_key: str):
         self.config = config
+        if not api_key:
+            raise ValueError('A provider API key is required to initialize the LLM service.')
         settings = get_settings()
         kwargs: dict[str, Any] = {}
         if config.provider == 'openrouter':
-            kwargs['api_key'] = settings.openrouter_api_key
+            kwargs['api_key'] = api_key
             kwargs['base_url'] = settings.openrouter_base_url
             headers = {}
             if settings.openrouter_site_url:
@@ -52,7 +48,7 @@ class LLMService:
             if headers:
                 kwargs['default_headers'] = headers
         else:
-            kwargs['api_key'] = settings.openai_api_key
+            kwargs['api_key'] = api_key
         self.client = OpenAI(**kwargs)
 
     def _apply_reasoning(self, params: dict[str, Any]) -> None:
