@@ -168,7 +168,7 @@ def list_run_artifacts_for_model_package(model_package_id: str) -> list[dict[str
         _table('run_artifacts')
         .select('*')
         .eq('type', 'base_validation_log')
-        .contains('metadata', {'model_package_id': model_package_id})
+        .eq('model_package_id', model_package_id)
         .order('created_at', desc=True)
         .execute()
         .data

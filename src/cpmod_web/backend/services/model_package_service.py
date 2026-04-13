@@ -164,6 +164,7 @@ async def create_model_package_with_validation(
         queries.add_run_artifact(
             {
                 'run_id': None,
+                'model_package_id': package['id'],
                 'type': ArtifactType.BASE_VALIDATION_LOG.value,
                 'storage_path': artifact_path,
                 'metadata': {'model_package_id': package['id'], 'passed': execution.passed},
