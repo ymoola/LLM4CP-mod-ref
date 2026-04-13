@@ -1,12 +1,20 @@
 alter table run_artifacts
   add column if not exists model_package_id uuid references model_packages(id) on delete cascade;
 
-update run_artifacts
-set model_package_id = nullif(metadata->>'model_package_id', '')::uuid
-where model_package_id is null
-  and metadata ? 'model_package_id';
+update run_artifacts ra
+set model_package_id = mp.id
+from model_packages mp
+where ra.model_package_id is null
+  and ra.metadata ? 'model_package_id'
+  and mp.id = nullif(ra.metadata->>'model_package_id', '')::uuid;
 
-create index if not exists run_artifacts_model_package_id_idx on run_artifacts(model_package_id);
+delete from run_artifacts
+where run_id is null
+  and model_package_id is null
+  and type = 'base_validation_log';
+
+create index if not exists run_artifacts_model_package_id_idx
+  on run_artifacts(model_package_id);
 
 alter table run_artifacts
   drop constraint if exists run_artifacts_owner_path_check;
