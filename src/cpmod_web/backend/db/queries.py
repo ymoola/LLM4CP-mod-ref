@@ -28,6 +28,10 @@ def get_project_admin(project_id: str) -> dict[str, Any] | None:
     return data[0] if data else None
 
 
+def delete_project(project_id: str) -> None:
+    _table('projects').delete().eq('id', project_id).execute()
+
+
 def create_model_package(payload: dict[str, Any]) -> dict[str, Any]:
     return _table('model_packages').insert(payload).execute().data[0]
 

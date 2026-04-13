@@ -5,6 +5,10 @@ from ..db import queries
 from .storage_service import StorageService
 
 
+def _dedupe_paths(paths: list[str | None]) -> list[str]:
+    return list(dict.fromkeys(path for path in paths if path))
+
+
 def collect_change_request_artifact_paths(change_request_id: str) -> tuple[list[str], list[str]]:
     run_paths: list[str] = []
     run_ids: list[str] = []
@@ -61,3 +65,37 @@ def delete_model_package_with_artifacts(model_package_id: str) -> None:
         paths=validation_artifact_paths + descendant_artifact_paths,
     )
     queries.delete_model_package(model_package_id)
+
+
+def delete_project_with_artifacts(project_id: str) -> None:
+    settings = get_settings()
+    storage = StorageService()
+    project = queries.get_project_admin(project_id)
+    if not project:
+        return
+
+    model_paths: list[str | None] = []
+    artifact_paths: list[str | None] = []
+
+    for package in queries.list_model_packages(project_id=project_id):
+        model_paths.extend(
+            [
+                package.get('model_storage_path'),
+                package.get('problem_description_storage_path'),
+                package.get('input_data_storage_path'),
+            ]
+        )
+        artifact_paths.extend(
+            artifact.get('storage_path')
+            for artifact in queries.list_run_artifacts_for_model_package(package['id'])
+        )
+
+    for change_request in queries.list_change_requests(project_id=project_id):
+        if change_request.get('override_input_data_storage_path'):
+            model_paths.append(change_request['override_input_data_storage_path'])
+        _, descendant_artifact_paths = collect_change_request_artifact_paths(change_request['id'])
+        artifact_paths.extend(descendant_artifact_paths)
+
+    storage.delete_paths(bucket=settings.models_bucket, paths=_dedupe_paths(model_paths))
+    storage.delete_paths(bucket=settings.artifacts_bucket, paths=_dedupe_paths(artifact_paths))
+    queries.delete_project(project_id)

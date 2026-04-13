@@ -1,12 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export default function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const packagesQuery = useQuery({
     queryKey: ['model-packages', params.id],
     queryFn: () => api.listModelPackages(params.id),
@@ -18,12 +22,42 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
   const crQuery = useQuery({ queryKey: ['change-requests', params.id], queryFn: () => api.listChangeRequests(params.id) });
   const runsQuery = useQuery({ queryKey: ['project-runs', params.id], queryFn: () => api.listProjectRuns(params.id) });
   const packageLookup = new Map((packagesQuery.data ?? []).map((pkg) => [pkg.id, pkg]));
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => api.deleteProject(params.id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['projects'] });
+      router.push('/projects');
+      router.refresh();
+    },
+  });
+
+  function handleDeleteProject() {
+    if (
+      !window.confirm(
+        'Delete this project and all of its model packages, change requests, workflow runs, and artifacts? This cannot be undone.',
+      )
+    ) {
+      return;
+    }
+    deleteProjectMutation.mutate();
+  }
 
   return (
     <div className="space-y-8">
-      <div className="flex gap-6">
+      <div className="flex flex-wrap items-center gap-4">
         <Link href={`/projects/${params.id}/models/new`}>Upload model package</Link>
         <Link href={`/projects/${params.id}/cr/new`}>New change request</Link>
+        <Button
+          type="button"
+          className="bg-red-700 hover:bg-red-800"
+          disabled={deleteProjectMutation.isPending}
+          onClick={handleDeleteProject}
+        >
+          {deleteProjectMutation.isPending ? 'Deleting project…' : 'Delete project'}
+        </Button>
+        {deleteProjectMutation.isError ? (
+          <p className="text-sm text-red-700">{deleteProjectMutation.error instanceof Error ? deleteProjectMutation.error.message : 'Unable to delete project.'}</p>
+        ) : null}
       </div>
       <section className="space-y-3">
         <h2 className="text-2xl font-semibold">Model packages</h2>
