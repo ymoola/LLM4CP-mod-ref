@@ -38,6 +38,10 @@ export function RunViewer({ runId }: { runId: string }) {
         {run.model_package_filename ? <p className="text-sm text-slate-700">Base model package: {run.model_package_filename}</p> : null}
         {run.change_request_summary ? <p className="mt-2 text-sm text-slate-700">Requested change: {run.change_request_summary}</p> : null}
         <p className="mt-2 text-sm text-slate-700">
+          Selected model: {run.model_provider} · {run.model_name} · {run.model_preset}
+        </p>
+        <p className="text-sm text-slate-700">Credential source: saved {run.api_key_provider} key</p>
+        <p className="mt-2 text-sm text-slate-700">
           Runtime input source: {run.runtime_input_source === 'change_request_override' ? 'Change request override input_data.json' : 'Base model package input_data.json'}
         </p>
         {run.runtime_input_filename ? (

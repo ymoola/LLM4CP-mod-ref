@@ -1,9 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
-import type { ModelPackage } from '@/lib/types';
+import type { ModelPackage, RunCreatePayload } from '@/lib/types';
+import { getDefaultRunConfig, normalizeRunConfig, RunConfigPicker } from '@/components/run-config-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,13 +20,29 @@ export function ChangeRequestForm({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [runConfig, setRunConfig] = useState<RunCreatePayload | null>(null);
   const defaultPackageId = modelPackages[0]?.id ?? '';
   const [selectedPackageId, setSelectedPackageId] = useState(defaultPackageId);
+  const catalogQuery = useQuery({ queryKey: ['model-catalog'], queryFn: () => api.listModelCatalog() });
+  const credentialQuery = useQuery({ queryKey: ['provider-credentials'], queryFn: () => api.listProviderCredentials() });
 
   const selectedPackage = useMemo(
     () => modelPackages.find((pkg) => pkg.id === selectedPackageId) ?? null,
     [modelPackages, selectedPackageId],
   );
+  const missingProviderKey = useMemo(() => {
+    if (!runConfig) return null;
+    if (!credentialQuery.data) return null;
+    const status = (credentialQuery.data ?? []).find((item) => item.provider === runConfig.api_key_provider);
+    return status?.has_key ? null : runConfig.api_key_provider;
+  }, [credentialQuery.data, runConfig]);
+
+  useEffect(() => {
+    const catalog = catalogQuery.data ?? [];
+    if (!catalog.length) return;
+    setRunConfig((current) => normalizeRunConfig(current, catalog) ?? getDefaultRunConfig(catalog));
+  }, [catalogQuery.data]);
+
   const formatPackageLabel = (pkg: ModelPackage) => {
     const created = pkg.created_at ? new Date(pkg.created_at).toLocaleString() : null;
     const suffix = created ? `uploaded ${created}` : `id ${pkg.id.slice(0, 8)}`;
@@ -34,6 +53,14 @@ export function ChangeRequestForm({
     <form
       className="space-y-5"
       action={async (fd) => {
+        if (!runConfig) {
+          setError('Choose a run model before starting the workflow.');
+          return;
+        }
+        if (missingProviderKey) {
+          setError(`Save an API key for ${missingProviderKey} in Settings before running the workflow.`);
+          return;
+        }
         setSubmitting(true);
         setError(null);
         try {
@@ -58,7 +85,7 @@ export function ChangeRequestForm({
           }
 
           const changeRequest = await api.createChangeRequest(projectId, formData);
-          const run = await api.createRun({ change_request_id: changeRequest.id, model_config: 'fast' });
+          const run = await api.createRun({ ...runConfig, change_request_id: changeRequest.id });
           window.location.href = `/projects/${projectId}/runs/${run.id}`;
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Unable to submit change request.');
@@ -90,6 +117,23 @@ export function ChangeRequestForm({
           ) : null}
         </div>
       </div>
+
+      <RunConfigPicker
+        value={runConfig}
+        onChange={setRunConfig}
+        catalog={catalogQuery.data ?? []}
+        credentialStatuses={credentialQuery.data ?? []}
+        disabled={submitting || catalogQuery.isLoading || credentialQuery.isLoading}
+      />
+      {missingProviderKey ? (
+        <p className="text-sm text-amber-700">
+          Save an API key for <span className="font-medium">{missingProviderKey}</span> in{' '}
+          <Link href="/settings" className="underline">
+            Settings
+          </Link>{' '}
+          before launching the workflow.
+        </p>
+      ) : null}
 
       <div className="grid gap-2">
         <label className="text-sm font-medium">Describe the change that needs to be made</label>
@@ -139,7 +183,10 @@ export function ChangeRequestForm({
       </details>
 
       {error ? <p className="text-sm text-rose-700">{error}</p> : null}
-      <Button type="submit" disabled={submitting || !selectedPackageId}>
+      <Button
+        type="submit"
+        disabled={submitting || !selectedPackageId || !runConfig || Boolean(missingProviderKey) || catalogQuery.isLoading || credentialQuery.isLoading}
+      >
         {submitting ? 'Submitting…' : 'Run workflow'}
       </Button>
     </form>

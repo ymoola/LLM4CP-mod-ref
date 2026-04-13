@@ -8,9 +8,11 @@ from typing import Any
 from ..config import get_settings
 from ..db import queries
 from ..models.domain import ArtifactType, EventOutcome, FailureType, RunStatus
+from ..services.credential_service import CredentialService
 from ..services.diff_service import build_unified_diff
 from ..services.execution.factory import get_execution_backend
 from ..services.llm_service import LLMService, get_model_config
+from ..services.model_catalog import infer_run_selection
 from ..services.storage_service import StorageService
 from .graph import build_graph
 from .state import WorkflowState
@@ -173,12 +175,23 @@ async def run_workflow(run_id: str) -> dict[str, Any]:
     change_request = queries.get_change_request(run['change_request_id'])
     if not change_request:
         raise ValueError(f'Change request {run["change_request_id"]} does not exist.')
+    project = queries.get_project_admin(change_request['project_id'])
+    if not project:
+        raise ValueError(f'Project {change_request["project_id"]} does not exist.')
     model_package = queries.get_model_package(change_request['model_package_id'])
     if not model_package:
         raise ValueError(f'Model package {change_request["model_package_id"]} does not exist.')
 
     storage = StorageService()
-    llm = LLMService(get_model_config(run['model_config']))
+    model_preset, model_provider, model_name, api_key_provider = infer_run_selection(run)
+    credential_row = queries.get_user_api_credential(user_id=project['user_id'], provider=api_key_provider)
+    if not credential_row:
+        raise ValueError(f'No saved {api_key_provider} API key is available for this run.')
+    api_key = CredentialService().decrypt(credential_row['encrypted_api_key'])
+    llm = LLMService(
+        get_model_config(preset=model_preset, provider=model_provider, model_name=model_name),
+        api_key=api_key,
+    )
     executor = get_execution_backend()
     runtime = ProductWorkflowRuntime(run=run, change_request=change_request, model_package=model_package, storage=storage, llm=llm, executor=executor)
 

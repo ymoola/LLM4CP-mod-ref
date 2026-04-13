@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from ..db import queries
 from ..middleware.auth import AuthenticatedUser, get_current_user
 from ..models.api import ProjectCreate, ProjectRead, RunSummaryRead
+from ..services.run_serialization import serialize_run
 
 router = APIRouter(prefix='/projects', tags=['projects'])
 
@@ -24,18 +25,4 @@ def list_project_runs(project_id: str, current_user: AuthenticatedUser = Depends
     project = queries.get_project(project_id=project_id, user_id=current_user.id)
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Project not found.')
-    runs = []
-    for run in queries.list_workflow_runs_for_project(project_id):
-        change_request = queries.get_change_request(run['change_request_id'])
-        model_package = queries.get_model_package(change_request['model_package_id']) if change_request else None
-        runtime_input_source = 'change_request_override' if change_request and change_request.get('override_input_data_storage_path') else 'base'
-        runs.append(
-            {
-                **run,
-                'model_package_id': change_request.get('model_package_id') if change_request else None,
-                'model_package_filename': model_package.get('filename') if model_package else None,
-                'change_request_summary': change_request.get('what_should_change') if change_request else None,
-                'runtime_input_source': runtime_input_source,
-            }
-        )
-    return runs
+    return [serialize_run(run, include_details=False) for run in queries.list_workflow_runs_for_project(project_id)]

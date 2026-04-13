@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { RunLauncher } from '@/components/run-launcher';
 import { api } from '@/lib/api';
 
 export default function ChangeRequestDetailPage({
@@ -94,6 +95,14 @@ export default function ChangeRequestDetailPage({
       </Card>
 
       <Card className="space-y-3">
+        <h2 className="text-lg font-semibold">Launch a run</h2>
+        <p className="text-sm text-slate-600">
+          Runs are model-specific. You can relaunch this change request with a different curated provider/model at any time.
+        </p>
+        <RunLauncher changeRequestId={changeRequest.id} projectId={params.id} />
+      </Card>
+
+      <Card className="space-y-3">
         <h2 className="text-lg font-semibold">Runs from this change request</h2>
         {linkedRuns.length ? (
           <div className="grid gap-3">
@@ -106,6 +115,7 @@ export default function ChangeRequestDetailPage({
                 <p className="text-sm text-slate-600">
                   Runtime input: {run.runtime_input_source === 'change_request_override' ? 'Change request override' : 'Base model package input'}
                 </p>
+                <p className="text-sm text-slate-600">Model: {run.model_provider} · {run.model_name} · {run.model_preset}</p>
               </div>
             ))}
           </div>

@@ -21,14 +21,18 @@ Frontend expects:
 Backend expects `CPMOD_WEB_*` variables such as:
 - `CPMOD_WEB_SUPABASE_URL`
 - `CPMOD_WEB_SUPABASE_SERVICE_ROLE_KEY`
-- `CPMOD_WEB_OPENAI_API_KEY`
-- `CPMOD_WEB_OPENROUTER_API_KEY`
+- `CPMOD_WEB_CREDENTIAL_ENCRYPTION_SECRET`
 - `CPMOD_WEB_E2B_API_KEY`
 
 ## Current state
 
-This is an implementation scaffold intended to establish the product architecture and core contracts:
-- strict model package upload contract
-- DB-backed workflow runs and events
-- E2B/local execution abstraction
+This product subtree now includes:
+- strict model package upload and validation
+- DB-backed workflow runs, events, and artifacts
+- per-run curated model selection
+- encrypted user-saved provider keys (OpenAI and OpenRouter)
+- E2B/local execution abstraction behind one interface
 - staged LangGraph workflow without thesis-specific unit tests
+- dashboard, settings, change-request, and run-detail views
+
+See `/Users/yusufmoola/Desktop/UofT Y4/Thesis/LLM4CP-mod-ref/src/cpmod_web/DEPLOYMENT.md` for the Vercel + Railway + Supabase deployment setup.

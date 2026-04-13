@@ -8,7 +8,7 @@ import { useAuth } from '@/components/auth-provider';
 const AUTH_ROUTES = new Set(['/login', '/signup']);
 
 function isProtectedRoute(pathname: string) {
-  return pathname === '/dashboard' || pathname.startsWith('/projects');
+  return pathname === '/dashboard' || pathname === '/settings' || pathname.startsWith('/projects');
 }
 
 export function AuthGate({ children }: { children: React.ReactNode }) {

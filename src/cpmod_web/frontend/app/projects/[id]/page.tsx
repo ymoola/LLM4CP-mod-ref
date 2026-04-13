@@ -75,6 +75,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                 <p className="text-sm text-slate-600">
                   Runtime input: {run.runtime_input_source === 'change_request_override' ? 'Change request override' : 'Base model package input'}
                 </p>
+                <p className="text-sm text-slate-600">Model: {run.model_provider} · {run.model_name} · {run.model_preset}</p>
                 <p className="text-sm text-slate-600">Status: {run.status}</p>
               </Card>
             ))

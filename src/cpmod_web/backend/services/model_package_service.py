@@ -10,6 +10,7 @@ from fastapi import HTTPException, UploadFile, status
 from ..config import get_settings
 from ..db import queries
 from ..models.domain import ArtifactType, ExecutionResult, FailureType
+from .dependency_policy import scan_supported_imports, supported_runtime_description
 from .execution.harness import execution_mode_from_metadata
 from .execution.factory import get_execution_backend
 from .storage_service import StorageService
@@ -108,6 +109,16 @@ async def create_model_package_with_validation(
 
     model_code = (await model_file.read()).decode('utf-8')
     problem_description = (await description_file.read()).decode('utf-8')
+    dependency_scan = scan_supported_imports(model_code)
+    if not dependency_scan.is_supported:
+        unsupported = ', '.join(dependency_scan.unsupported_modules)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                'Uploaded model package uses unsupported third-party imports: '
+                f'{unsupported}. Supported runtime is {supported_runtime_description()}'
+            ),
+        )
     metadata = {
         'execution_mode': normalized_execution_mode,
         'entrypoint_name': entrypoint,
@@ -115,6 +126,7 @@ async def create_model_package_with_validation(
         'key_names_to_preserve': key_names,
         'solver_assumptions': _default_solver_assumptions(execution_mode=normalized_execution_mode, entrypoint_name=entrypoint),
         'input_value_info': (input_value_info or '').strip() or _default_input_value_info(input_data),
+        'supported_runtime': supported_runtime_description(),
     }
 
     package_id = str(uuid4())

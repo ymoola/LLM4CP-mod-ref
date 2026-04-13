@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from .config import get_settings
 from .db import queries
 from .models.domain import FailureType, RunStatus
 from .workflow.service import run_workflow
@@ -39,4 +40,5 @@ async def poll_and_run() -> None:
 
 
 if __name__ == '__main__':
+    get_settings().validate_for_runtime()
     asyncio.run(poll_and_run())

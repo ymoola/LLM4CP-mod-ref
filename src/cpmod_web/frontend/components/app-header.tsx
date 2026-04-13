@@ -25,6 +25,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
 function currentViewLabel(pathname: string) {
   if (pathname === '/') return 'Home';
   if (pathname === '/dashboard') return 'Dashboard';
+  if (pathname === '/settings') return 'Settings';
   if (pathname === '/projects') return 'Projects';
   if (pathname === '/projects/new') return 'Create project';
   if (pathname === '/login') return 'Log in';
@@ -63,6 +64,7 @@ export function AppHeader() {
   const navLinks = isAuthed
     ? [
         { href: '/dashboard', label: 'Dashboard', active: pathname === '/dashboard' },
+        { href: '/settings', label: 'Settings', active: pathname === '/settings' },
         { href: '/projects', label: 'Projects', active: pathname === '/projects' || pathname.startsWith('/projects/') },
         ...(projectId
           ? [
@@ -78,6 +80,7 @@ export function AppHeader() {
     isAuthed &&
     pathname !== '/' &&
     pathname !== '/dashboard' &&
+    pathname !== '/settings' &&
     pathname !== '/projects' &&
     pathname !== '/login' &&
     pathname !== '/signup';
