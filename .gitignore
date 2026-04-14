@@ -217,6 +217,8 @@ src/cpmod_web/frontend/node_modules/
 src/cpmod_web/frontend/.next/
 src/cpmod_web/frontend/out/
 src/cpmod_web/frontend/.vercel/
+!src/cpmod_web/frontend/lib/
+!src/cpmod_web/frontend/lib/**
 
 # cpmod_web local env files
 src/cpmod_web/frontend/.env.local
