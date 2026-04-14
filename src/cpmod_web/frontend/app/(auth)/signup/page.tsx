@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { BrandLockup } from '../../../components/brand-lockup';
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseClient } from '../../../lib/supabase';
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
@@ -34,6 +34,7 @@ export default function SignupPage() {
           action={async (fd) => {
             const email = String(fd.get('email') || '');
             const password = String(fd.get('password') || '');
+            const supabase = getSupabaseClient();
             const { error } = await supabase.auth.signUp({ email, password });
             if (error) {
               setError(error.message);

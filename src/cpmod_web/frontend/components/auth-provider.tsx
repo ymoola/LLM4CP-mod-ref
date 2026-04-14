@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 
 type AuthContextValue = {
   loading: boolean;
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    const supabase = getSupabaseClient();
 
     async function loadSession() {
       const { data } = await supabase.auth.getSession();
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function logout() {
+    const supabase = getSupabaseClient();
     await supabase.auth.signOut();
     localStorage.removeItem('cpmod-access-token');
     setIsAuthed(false);
