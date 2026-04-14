@@ -1,4 +1,4 @@
-import { ModelUploadForm } from '@/components/model-upload';
+import { ModelUploadForm } from '../../../../../components/model-upload';
 
 export default function NewModelPackagePage({ params }: { params: { id: string } }) {
   return (

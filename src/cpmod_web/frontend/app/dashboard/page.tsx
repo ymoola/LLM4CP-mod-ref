@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
-import { BrandLockup } from '@/components/brand-lockup';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { BrandLockup } from '../../components/brand-lockup';
+import { Badge } from '../../components/ui/badge';
+import { Card } from '../../components/ui/card';
+import { api } from '../../lib/api';
 
 function SummaryCard({
   label,

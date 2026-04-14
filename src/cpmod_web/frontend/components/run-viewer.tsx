@@ -2,12 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
-import type { WorkflowRun } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
-import { ClarificationPanel } from '@/components/clarification-panel';
-import { DiffView } from '@/components/diff-view';
-import { InvariantsPanel } from '@/components/invariants-panel';
+import { api } from '../lib/api';
+import type { WorkflowRun } from '../lib/types';
+import { Badge } from './ui/badge';
+import { ClarificationPanel } from './clarification-panel';
+import { DiffView } from './diff-view';
+import { InvariantsPanel } from './invariants-panel';
 
 export function RunViewer({ runId }: { runId: string }) {
   const query = useQuery<WorkflowRun>({

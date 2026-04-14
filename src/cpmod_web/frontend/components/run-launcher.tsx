@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
-import type { RunCreatePayload } from '@/lib/types';
-import { getDefaultRunConfig, normalizeRunConfig, RunConfigPicker } from '@/components/run-config-picker';
-import { Button } from '@/components/ui/button';
+import { api } from '../lib/api';
+import type { RunCreatePayload } from '../lib/types';
+import { getDefaultRunConfig, normalizeRunConfig, RunConfigPicker } from './run-config-picker';
+import { Button } from './ui/button';
 
 export function RunLauncher({ changeRequestId, projectId }: { changeRequestId: string; projectId: string }) {
   const [runConfig, setRunConfig] = useState<RunCreatePayload | null>(null);

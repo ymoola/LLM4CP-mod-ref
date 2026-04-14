@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { Badge } from '../../components/ui/badge';
+import { Card } from '../../components/ui/card';
+import { api } from '../../lib/api';
 
 export default function ProjectsPage() {
   const { data, isLoading, error } = useQuery({ queryKey: ['projects'], queryFn: api.listProjects });

@@ -2,9 +2,9 @@
 
 import { useMemo } from 'react';
 
-import type { ModelCatalogEntry, ProviderCredentialStatus, RunCreatePayload } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
-import { Select } from '@/components/ui/select';
+import type { ModelCatalogEntry, ProviderCredentialStatus, RunCreatePayload } from '../lib/types';
+import { Badge } from './ui/badge';
+import { Select } from './ui/select';
 
 function sortEntries(catalog: ModelCatalogEntry[]) {
   return [...catalog].sort((left, right) => {

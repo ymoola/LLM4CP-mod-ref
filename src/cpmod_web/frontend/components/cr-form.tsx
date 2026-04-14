@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
-import type { ModelPackage, RunCreatePayload } from '@/lib/types';
-import { getDefaultRunConfig, normalizeRunConfig, RunConfigPicker } from '@/components/run-config-picker';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { api } from '../lib/api';
+import type { ModelPackage, RunCreatePayload } from '../lib/types';
+import { getDefaultRunConfig, normalizeRunConfig, RunConfigPicker } from './run-config-picker';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Select } from './ui/select';
+import { Textarea } from './ui/textarea';
 
 export function ChangeRequestForm({
   projectId,

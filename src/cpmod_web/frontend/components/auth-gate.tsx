@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { useAuth } from '@/components/auth-provider';
+import { useAuth } from './auth-provider';
 
 const AUTH_ROUTES = new Set(['/login', '/signup']);
 

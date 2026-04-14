@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
-import type { Provider } from '@/lib/types';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { api } from '../../lib/api';
+import type { Provider } from '../../lib/types';
+import { Card } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Badge } from '../../components/ui/badge';
 
 function ProviderKeyCard({ provider }: { provider: Provider }) {
   const credentialsQuery = useQuery({ queryKey: ['provider-credentials'], queryFn: () => api.listProviderCredentials() });

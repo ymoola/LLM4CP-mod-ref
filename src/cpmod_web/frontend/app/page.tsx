@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 
-import { BrandLockup } from '@/components/brand-lockup';
-import { useAuth } from '@/components/auth-provider';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { BrandLockup } from '../components/brand-lockup';
+import { useAuth } from '../components/auth-provider';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
 
 const workflowStages = ['Parse', 'Clarify', 'Plan', 'Modify', 'Execute', 'Validate'];
 

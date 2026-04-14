@@ -5,8 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import clsx from 'clsx';
 
-import { useAuth } from '@/components/auth-provider';
-import { Button } from '@/components/ui/button';
+import { useAuth } from './auth-provider';
+import { Button } from './ui/button';
 
 function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
   return (

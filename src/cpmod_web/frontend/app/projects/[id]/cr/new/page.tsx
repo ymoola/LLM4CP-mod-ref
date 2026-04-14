@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
-import { ChangeRequestForm } from '@/components/cr-form';
+import { api } from '../../../../../lib/api';
+import { ChangeRequestForm } from '../../../../../components/cr-form';
 
 export default function NewChangeRequestPage({ params }: { params: { id: string } }) {
   const packagesQuery = useQuery({ queryKey: ['model-packages', params.id], queryFn: () => api.listModelPackages(params.id) });

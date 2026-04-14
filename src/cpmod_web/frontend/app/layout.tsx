@@ -2,10 +2,10 @@ import './globals.css';
 
 import type { Metadata } from 'next';
 
-import { AppHeader } from '@/components/app-header';
-import { AuthGate } from '@/components/auth-gate';
-import { AuthProvider } from '@/components/auth-provider';
-import { AppQueryProvider } from '@/lib/query-client';
+import { AppHeader } from '../components/app-header';
+import { AuthGate } from '../components/auth-gate';
+import { AuthProvider } from '../components/auth-provider';
+import { AppQueryProvider } from '../lib/query-client';
 
 export const metadata: Metadata = {
   title: 'ConstraintMod',

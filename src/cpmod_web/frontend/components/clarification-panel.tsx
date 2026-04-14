@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 
-import { api } from '@/lib/api';
-import type { WorkflowRun } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { api } from '../lib/api';
+import type { WorkflowRun } from '../lib/types';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
 
 export function ClarificationPanel({ run }: { run: WorkflowRun }) {
   const [answers, setAnswers] = useState<string[]>(run.clarification_questions.map(() => ''));

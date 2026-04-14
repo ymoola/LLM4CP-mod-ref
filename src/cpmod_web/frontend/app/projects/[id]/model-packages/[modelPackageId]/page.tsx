@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { Button } from '../../../../../components/ui/button';
+import { Card } from '../../../../../components/ui/card';
+import { api } from '../../../../../lib/api';
 
 export default function ModelPackageDetailPage({
   params,
