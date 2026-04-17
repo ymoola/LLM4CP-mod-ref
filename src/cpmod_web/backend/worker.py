@@ -10,6 +10,14 @@ from .workflow.service import run_workflow
 
 POLL_INTERVAL_SECONDS = 2.5
 logger = logging.getLogger(__name__)
+NOISY_LOGGERS = (
+    'httpx',
+    'httpcore',
+    'postgrest',
+    'realtime',
+    'storage3',
+    'supabase',
+)
 
 
 async def poll_and_run() -> None:
@@ -54,5 +62,7 @@ if __name__ == '__main__':
         level=getattr(logging, settings.log_level.upper(), logging.INFO),
         format='%(asctime)s %(levelname)s %(name)s: %(message)s',
     )
+    for logger_name in NOISY_LOGGERS:
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
     settings.validate_for_runtime()
     asyncio.run(poll_and_run())

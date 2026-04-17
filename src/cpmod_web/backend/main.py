@@ -12,6 +12,14 @@ from .routers import change_requests, dashboard, model_packages, projects, runs,
 settings = get_settings()
 settings.validate_for_runtime()
 logger = logging.getLogger(__name__)
+NOISY_LOGGERS = (
+    'httpx',
+    'httpcore',
+    'postgrest',
+    'realtime',
+    'storage3',
+    'supabase',
+)
 
 app = FastAPI(title='CP Mod Web API', version='0.1.0')
 app.add_middleware(
@@ -32,6 +40,8 @@ app.include_router(settings_router.router)
 
 @app.on_event('startup')
 def log_readiness_issues() -> None:
+    for logger_name in NOISY_LOGGERS:
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
     issues = settings.readiness_issues()
     if issues:
         logger.warning('CP Mod Web backend readiness issues: %s', ' | '.join(issues))
