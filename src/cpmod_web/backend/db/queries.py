@@ -1,8 +1,42 @@
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any
 
-from .supabase_client import get_supabase_admin
+from .supabase_client import get_supabase_admin, reset_supabase_admin
+
+logger = logging.getLogger(__name__)
+TRANSIENT_QUERY_MARKERS = (
+    '502',
+    '503',
+    '504',
+    'bad gateway',
+    'connection reset by peer',
+    'json could not be generated',
+    'invalid json',
+    'peer closed connection',
+    'temporarily unavailable',
+    'timed out',
+)
+
+
+class QueryExecutionError(RuntimeError):
+    """Raised when a Supabase/PostgREST request fails."""
+
+
+def _format_query_error(exc: Exception) -> str:
+    text = str(exc).strip()
+    if not text:
+        return exc.__class__.__name__
+    if len(text) > 500:
+        return text[:497] + '...'
+    return text
+
+
+def _is_transient_query_error(exc: Exception) -> bool:
+    text = _format_query_error(exc).lower()
+    return any(marker in text for marker in TRANSIENT_QUERY_MARKERS)
 
 
 def _table(name: str):
@@ -181,6 +215,24 @@ def list_run_artifacts_for_model_package(model_package_id: str) -> list[dict[str
 
 
 def claim_pending_run() -> dict[str, Any] | None:
-    response = get_supabase_admin().rpc('claim_pending_run').execute()
-    data = response.data or []
-    return data[0] if data else None
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = get_supabase_admin().rpc('claim_pending_run').execute()
+            data = response.data or []
+            return data[0] if data else None
+        except Exception as exc:
+            formatted = _format_query_error(exc)
+            is_transient = _is_transient_query_error(exc)
+            if is_transient and attempt < max_attempts:
+                logger.warning(
+                    'Transient Supabase polling failure on attempt %s/%s while claiming pending runs: %s',
+                    attempt,
+                    max_attempts,
+                    formatted,
+                )
+                reset_supabase_admin()
+                time.sleep(min(2.0, 0.5 * attempt))
+                continue
+            error_cls = QueryExecutionError
+            raise error_cls(f'Failed to claim pending run: {formatted}') from exc
