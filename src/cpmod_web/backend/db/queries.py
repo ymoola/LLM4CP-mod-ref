@@ -12,10 +12,16 @@ TRANSIENT_QUERY_MARKERS = (
     '503',
     '504',
     'bad gateway',
+    'remoteprotocolerror',
+    'connectionterminated',
+    'connection terminated',
     'connection reset by peer',
     'json could not be generated',
     'invalid json',
+    'last_stream_id',
+    'error_code:0',
     'peer closed connection',
+    'server disconnected',
     'temporarily unavailable',
     'timed out',
 )
@@ -23,6 +29,10 @@ TRANSIENT_QUERY_MARKERS = (
 
 class QueryExecutionError(RuntimeError):
     """Raised when a Supabase/PostgREST request fails."""
+
+    def __init__(self, message: str, *, transient: bool = False):
+        super().__init__(message)
+        self.transient = transient
 
 
 def _format_query_error(exc: Exception) -> str:
@@ -234,5 +244,7 @@ def claim_pending_run() -> dict[str, Any] | None:
                 reset_supabase_admin()
                 time.sleep(min(2.0, 0.5 * attempt))
                 continue
-            error_cls = QueryExecutionError
-            raise error_cls(f'Failed to claim pending run: {formatted}') from exc
+            raise QueryExecutionError(
+                f'Failed to claim pending run: {formatted}',
+                transient=is_transient,
+            ) from exc

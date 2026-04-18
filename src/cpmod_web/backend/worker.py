@@ -5,6 +5,7 @@ import logging
 
 from .config import get_settings
 from .db import queries
+from .db.queries import QueryExecutionError
 from .models.domain import FailureType, RunStatus
 from .workflow.service import run_workflow
 
@@ -51,6 +52,11 @@ async def poll_and_run() -> None:
                         )
                     except Exception:
                         logger.exception('Failed to persist worker failure state for run %s.', run['id'])
+        except QueryExecutionError as exc:
+            if exc.transient:
+                logger.warning('Transient worker poll failure while claiming pending runs: %s', exc)
+            else:
+                logger.exception('Worker poll cycle failed while claiming pending runs.')
         except Exception:
             logger.exception('Worker poll cycle failed while claiming pending runs.')
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
